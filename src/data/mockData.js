@@ -8,7 +8,8 @@ export const mockProducts = [
     price: 1250,
     availability: "En stock",
     location: "Sucursal Norte",
-    image: "https://placehold.co/300x200/1f2937/10b981?text=Balatas+Brembo"
+    // Imagen real de frenos/rueda
+    image: "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=500&auto=format&fit=crop"
   },
   {
     id: 2,
@@ -19,7 +20,8 @@ export const mockProducts = [
     price: 980,
     availability: "Pocas unidades",
     location: "Distribuidora Central",
-    image: "https://placehold.co/300x200/1f2937/10b981?text=Aceite+Castrol"
+    // Imagen real de motor/aceite
+    image: "https://images.unsplash.com/photo-1635784063859-99c67bc28dce?q=80&w=500&auto=format&fit=crop"
   },
   {
     id: 3,
@@ -30,7 +32,8 @@ export const mockProducts = [
     price: 2100,
     availability: "En stock",
     location: "Sucursal Sur",
-    image: "https://placehold.co/300x200/1f2937/10b981?text=Amortiguadores+KYB"
+    // Imagen real de suspensión
+    image: "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=500&auto=format&fit=crop"
   }
 ];
 
