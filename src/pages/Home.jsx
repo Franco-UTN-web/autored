@@ -37,11 +37,11 @@ export default function Home() {
             <h2 className="text-2xl font-black text-gray-900">Piezas Destacadas</h2>
             <a href="/catalogo" className="text-autoblue hover:text-blue-800 text-sm font-bold">Ver catálogo completo →</a>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <div className="grid grid-cols-1 gap-6">
+               {mockProducts.map(product => (
+               <ProductCard key={product.id} product={product} />
+                  ))}
+             </div>
         </div>
 
         {/* Sidebar Destacados */}

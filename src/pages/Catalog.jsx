@@ -59,15 +59,15 @@ export default function Catalog() {
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {mockProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-              {/* Duplicados visuales para el demo */}
-              {mockProducts.map(product => (
-                <ProductCard key={product.id + 'dup'} product={{...product, id: product.id + 10}} />
-              ))}
-            </div>
+            <div className="grid grid-cols-1 gap-6">
+  {mockProducts.map(product => (
+    <ProductCard key={product.id} product={product} />
+  ))}
+  {/* Duplicados visuales */}
+  {mockProducts.map(product => (
+    <ProductCard key={product.id + 'dup'} product={{...product, id: product.id + 10}} />
+  ))}
+</div>
           </div>
         </div>
       </div>
