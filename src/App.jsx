@@ -1,122 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import ChatWindow from './components/ChatWindow';
+import Home from './pages/Home';
+import Catalog from './pages/Catalog';
+import RolesPanel from './pages/RolesPanel';
+
+// Dummy Login Component (para evitar errores si navegas a /login)
+const Login = () => (
+  <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+    <div className="bg-gray-900 p-8 rounded-xl border border-gray-800 w-96 text-center">
+      <h2 className="text-2xl font-bold text-white mb-6">Iniciar Sesión</h2>
+      <input type="email" placeholder="Correo electrónico" className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 mb-4" />
+      <input type="password" placeholder="Contraseña" className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 mb-6" />
+      <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg font-medium transition-colors">Ingresar</button>
+    </div>
+  </div>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Router>
+      <div className="min-h-screen bg-gray-950 font-sans selection:bg-emerald-500 selection:text-white">
+        <Navbar />
+        
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalogo" element={<Catalog />} />
+            <Route path="/roles" element={<RolesPanel />} />
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </main>
 
-      <div className="ticks"></div>
+        {/* Footer genérico */}
+        <footer className="bg-gray-900 border-t border-gray-800 py-8 text-center text-gray-500 text-sm mt-auto">
+          <p>© 2026 AutoRed. Plataforma de consulta frontend simulada.</p>
+        </footer>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {/* Componente flotante global */}
+        <ChatWindow />
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;
