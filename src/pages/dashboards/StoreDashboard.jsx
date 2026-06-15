@@ -1,289 +1,481 @@
-import { useState } from 'react';
-// IMPORTANTE: Asegúrate de que esta ruta hacia mockData sea correcta en tu proyecto
-import { mockProducts } from '../../data/mockData'; 
+import { useState, useEffect } from 'react';
 
+// --- DICCIONARIOS LOCALES (Viven AFUERA del componente) ---
+const vehiculosDb = {
+  "Nissan": ["Versa", "Sentra", "Tsuru", "March", "NP300", "Kicks", "Tiida"],
+  "Volkswagen": ["Jetta", "Golf", "Vento", "Polo", "Saveiro", "Tiguan", "Vocho"],
+  "Chevrolet": ["Chevy", "Aveo", "Spark", "Silverado", "Beat", "Tracker", "Onix"],
+  "Ford": ["Fiesta", "Focus", "Figo", "Ranger", "Explorer", "F-150", "Mustang"],
+  "Toyota": ["Yaris", "Corolla", "Camry", "Hilux", "RAV4", "Avanza"],
+  "Honda": ["Civic", "City", "CR-V", "Accord", "HR-V"],
+  "Universal": ["Aplica para cualquier modelo"]
+};
+
+const aniosDisponibles = [
+  "Todos los años", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018"
+];
+
+const marcasRefacciones = [
+  "Bosch", "Brembo", "Gates", "LUK", "Valeo", "ACDelco", "Castrol", "KYB", "NGK", "Genérica"
+];
+
+// =====================================================================
+// INICIO DEL COMPONENTE PRINCIPAL (Todo lo de adentro debe estar aquí)
+// =====================================================================
 export default function StoreDashboard() {
-  // Estados para la navegación y el formulario
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('catalog');
   const [showForm, setShowForm] = useState(false);
+  const [inventarioLocal, setInventarioLocal] = useState([]);
+  const [cargando, setCargando] = useState(true);
   
-  const [formData, setFormData] = useState({
-    marca: '', modelo: '', nombre_comercial: '', descripcion: '',
-    fabricante_original: '', nivel_calidad: 'Premium', tiempo_duracion: '',
-    stock: 0, precio_lista: 0, precio_oferta: 0,
-    establecimiento_id: '08440253-dabf-41b3-b30d-babf48f7974f' // ¡Recuerda poner tu UUID real aquí!
-  });
+  const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
+  
+  // ESTADO DE EDICIÓN (Acomodado correctamente adentro)
+  const [idEdicion, setIdEdicion] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'exito' });
+  const [modalEliminar, setModalEliminar] = useState({ visible: false, idProducto: null });
+
+  // Función controladora de la notificación flotante
+  const mostrarNotificacion = (mensaje, tipo = 'exito') => {
+    setNotificacion({ visible: true, mensaje, tipo });
+    // Se oculta sola después de 3.5 segundos
+    setTimeout(() => setNotificacion({ visible: false, mensaje: '', tipo: 'exito' }), 3500);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const ESTABLECIMIENTO_ID = '08440253-dabf-41b3-b30d-babf48f7974f';
+  // ¡RECUERDA PONER TU LLAVE REAL AQUÍ PARA QUE PUEDAS SUBIR FOTOS!
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o'; 
+
+  const [formData, setFormData] = useState({
+    categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '',
+    fabricante_original: '', nivel_calidad: 'Premium', tiempo_duracion: '',
+    stock: 1, precio_lista: 0, precio_oferta: 0, establecimiento_id: ESTABLECIMIENTO_ID,
+    tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
+  });
+
+  const cargarInventario = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/inventario/agregar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      const response = await fetch(`http://localhost:8080/api/inventario/tienda/${ESTABLECIMIENTO_ID}`);
       if (response.ok) {
-        alert("¡Producto guardado exitosamente en Supabase!");
-        setShowForm(false);
-      } else {
-        alert("Error en el servidor al guardar.");
+        const data = await response.json();
+        setInventarioLocal(data);
       }
     } catch (error) {
-      alert("Error de conexión con el backend.");
+      console.error("Error al cargar inventario:", error);
+    } finally {
+      setCargando(false);
     }
   };
 
-  // Datos extendidos de cotizaciones para la simulación
-  const mockRequests = [
-    { id: "REQ-042", part: "Bomba de Agua GMB", vehicle: "Chevy 2005 1.6L", client: "Taller Mecánico Automotriz Silva", status: "Pendiente", time: "Hace 5 min" },
-    { id: "REQ-039", part: "Balatas Delanteras Brembo", vehicle: "Nissan Versa 2018", client: "Jesús Alarcón (Particular)", status: "Respondido", time: "Hace 20 min" },
-    { id: "REQ-031", part: "Aceite Sintético Castrol 5W-30", vehicle: "Universal", client: "Refaccionaria Hermanos Gómez", status: "Vendido", time: "Ayer" }
-  ];
+  useEffect(() => {
+    cargarInventario();
+  }, []);
+
+  // FUNCIÓN PARA CARGAR DATOS EN EL FORMULARIO (MODO EDICIÓN)
+  const cargarDatosParaEdicion = (item) => {
+    setIdEdicion(item.id);
+    setImagenSeleccionada(null); // Limpiamos si había otra foto seleccionada
+    setFormData({
+      categoria: item.pieza?.categoria || 'Motor',
+      marca: item.pieza?.marca || '',
+      nombre_comercial: item.pieza?.nombre_comercial || '',
+      descripcion: item.pieza?.descripcion || '',
+      nivel_calidad: item.pieza?.nivel_calidad || 'Premium',
+      stock: item.stock || 1,
+      precio_lista: item.precio_lista || 0,
+      precio_oferta: item.precio_oferta || 0,
+      establecimiento_id: ESTABLECIMIENTO_ID,
+      tipo_vehiculo: item.pieza?.tipo_vehiculo || 'Auto',
+      marca_vehiculo: item.pieza?.marca_vehiculo || '',
+      modelo: item.pieza?.modelo || '',
+      anio_vehiculo: item.pieza?.anio_vehiculo || '',
+      imagen_url: item.pieza?.imagen_url || ''
+    });
+    
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Te lleva al formulario automáticamente
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      if (name === 'marca_vehiculo') newData.modelo = '';
+      return newData;
+    });
+  };
+
+  const confirmarEliminacion = (id) => {
+    setModalEliminar({ visible: true, idProducto: id });
+  };
+
+  // 2. Si dice que "Sí", se ejecuta esto:
+  const ejecutarEliminacion = async () => {
+    const id = modalEliminar.idProducto;
+    setModalEliminar({ visible: false, idProducto: null }); // Cerramos el modal
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        mostrarNotificacion("Producto eliminado del inventario.");
+        cargarInventario();
+      } else {
+        mostrarNotificacion("Error al intentar eliminar el producto.", "error");
+      }
+    } catch (error) {
+      mostrarNotificacion("Error de conexión: " + error.message, "error");
+    }
+  };
+
+  const subirImagenASupabase = async (file) => {
+    const extension = file.name.split('.').pop();
+    const nombreUnico = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${extension}`;
+    const urlUpload = `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/refaccionarias/${nombreUnico}`;
+
+    const response = await fetch(urlUpload, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': file.type 
+      },
+      body: file
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || errorData.error || "Rechazado por Supabase Storage");
+    }
+
+    return `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/public/refaccionarias/${nombreUnico}`;
+  };
+
+  // HANDLESUBMIT INTELIGENTE (Crea o Actualiza)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      let urlFinalImagen = formData.imagen_url;
+
+      if (imagenSeleccionada) {
+        mostrarNotificacion("Subiendo imagen a la nube..."); // Así se ve moderno y no congela
+        urlFinalImagen = await subirImagenASupabase(imagenSeleccionada);
+      }
+
+      const payloadCompleto = { ...formData, imagen_url: urlFinalImagen };
+
+      // Lógica de decisión: POST vs PUT
+      const urlFetch = idEdicion 
+        ? `http://localhost:8080/api/inventario/actualizar/${idEdicion}` 
+        : 'http://localhost:8080/api/inventario/agregar';
+      
+      const metodoFetch = idEdicion ? 'PUT' : 'POST';
+
+      const response = await fetch(urlFetch, {
+        method: metodoFetch,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadCompleto)
+      });
+
+      if (response.ok) {
+        mostrarNotificacion(idEdicion ? "¡Producto actualizado correctamente!" : "¡Refacción guardada exitosamente!");
+        setShowForm(false);
+        setIdEdicion(null); // Limpiamos el modo edición
+        setImagenSeleccionada(null);
+        
+        setFormData({
+          categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '',
+          fabricante_original: '', nivel_calidad: 'Premium', tiempo_duracion: '',
+          stock: 1, precio_lista: 0, precio_oferta: 0, establecimiento_id: ESTABLECIMIENTO_ID,
+          tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
+        });
+        
+        cargarInventario();
+      } else {
+        alert("Error en el servidor de Java.");
+      }
+    } catch (error) {
+      alert("Error: " + error.message);
+    }
+  };
 
   return (
     <div className="py-10 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Encabezado Principal */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 pb-4 border-b border-gray-200 gap-4">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mostrador Digital</h1>
             <p className="text-gray-500 font-medium mt-1">Autopartes Express — <span className="text-autoblue font-bold">Sucursal Norte</span></p>
           </div>
-          <span className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm">
-            <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span>
-            Terminal Sincronizada con Supabase
+          <span className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+            Terminal Sincronizada Automática
           </span>
         </div>
 
-        {/* Tarjetas de Indicadores Clave (KPIs) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-xs font-black uppercase tracking-wider">Solicitudes Nuevas</p>
-                <p className="text-4xl font-black text-autoblue mt-1">12</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl text-autoblue">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 font-medium mt-3 flex items-center gap-1">
-              <svg className="w-4 h-4 text-autored" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              3 requieren atención inmediata
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-xs font-black uppercase tracking-wider">Conversión de Cotizaciones</p>
-                <p className="text-4xl font-black text-green-600 mt-1">74%</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl text-green-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 font-medium mt-3 flex items-center gap-1">
-              <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
-              En comparación al mes pasado
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-autored transform transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-gray-400 text-xs font-black uppercase tracking-wider">Alertas de Inventario</p>
-                <p className="text-4xl font-black text-autored mt-1">2 <span className="text-lg text-gray-400 font-bold">SKUs</span></p>
-              </div>
-              <div className="p-3 bg-red-50 rounded-xl text-autored">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              </div>
-            </div>
-            <p className="text-xs text-red-600 font-bold mt-3">Piezas con bajo stock en mostrador</p>
-          </div>
-        </div>
-
-        {/* Sistema de Navegación por Pestañas (Tabs) */}
         <div className="flex border-b border-gray-200 mb-6 gap-4 overflow-x-auto">
-          <button 
-            onClick={() => setActiveTab('orders')}
-            className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'orders' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+          <button onClick={() => setActiveTab('orders')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'orders' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Cotizaciones Entrantes
           </button>
-          <button 
-            onClick={() => setActiveTab('catalog')}
-            className={`py-3 px-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'catalog' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <button onClick={() => setActiveTab('catalog')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'catalog' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Mi Inventario Local
           </button>
         </div>
 
-        {/* Contenido de Pestaña: Cotizaciones Entrantes */}
-        {activeTab === 'orders' && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-                  <tr>
-                    <th className="p-4 font-bold uppercase tracking-wider text-xs">ID / Tiempo</th>
-                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Cliente / Vehículo</th>
-                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Pieza Solicitada</th>
-                    <th className="p-4 font-bold uppercase tracking-wider text-xs">Estado</th>
-                    <th className="p-4 font-bold uppercase tracking-wider text-xs text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {mockRequests.map((req, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors group">
-                      <td className="p-4">
-                        <p className="font-bold text-gray-900">{req.id}</p>
-                        <p className="text-gray-500 text-xs mt-1">{req.time}</p>
-                      </td>
-                      <td className="p-4">
-                        <p className="font-bold text-autoblue">{req.client}</p>
-                        <p className="text-gray-600 text-xs mt-1">{req.vehicle}</p>
-                      </td>
-                      <td className="p-4 font-bold text-gray-900">
-                        {req.part}
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          req.status === 'Pendiente' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                          req.status === 'Respondido' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                          'bg-green-100 text-green-700 border border-green-200'
-                        }`}>
-                          {req.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        {req.status === 'Pendiente' ? (
-                          <button className="bg-autoblue text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-900 transition-colors shadow-sm text-xs">
-                            Enviar Cotización
-                          </button>
-                        ) : (
-                          <button className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-200 transition-colors text-xs border border-gray-200">
-                            Ver Detalles
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Contenido de Pestaña: Mi Inventario Local */}
         {activeTab === 'catalog' && (
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm animate-fade-in">
             
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-lg text-gray-900">Gestión de Stock Real</h3>
-              <button 
-                onClick={() => setShowForm(!showForm)}
-                className={`border-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-2 ${showForm ? 'border-gray-300 text-gray-500 hover:bg-gray-100' : 'border-autoblue text-autoblue hover:bg-autoblue hover:text-white'}`}
-              >
-                {showForm ? (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    Cancelar Registro
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-                    Agregar Nueva Pieza
-                  </>
-                )}
+              <button onClick={() => {
+                setShowForm(!showForm);
+                if(showForm) setIdEdicion(null); // Limpiar edición si cancelan
+              }} className={`border-2 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${showForm ? 'border-gray-300 text-gray-500' : 'border-autoblue text-autoblue'}`}>
+                {showForm ? 'Cancelar' : '+ Agregar Nueva Pieza'}
               </button>
             </div>
 
             {showForm && (
-              <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200 space-y-5 shadow-inner">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Nombre Comercial</label>
-                    <input type="text" name="nombre_comercial" value={formData.nombre_comercial} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" placeholder="Ej. Balatas Traseras Cerámicas" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Marca</label>
-                    <input type="text" name="marca" value={formData.marca} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" placeholder="Ej. Brembo" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Modelo Compatible</label>
-                    <input type="text" name="modelo" value={formData.modelo} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" placeholder="Ej. Nissan Versa 2018+" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Cantidad en Stock</label>
-                    <input type="number" name="stock" value={formData.stock} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Precio Compra ($)</label>
-                    <input type="number" name="precio_lista" value={formData.precio_lista} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Precio Venta ($)</label>
-                    <input type="number" name="precio_oferta" value={formData.precio_oferta} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Calidad</label>
-                    <select name="nivel_calidad" value={formData.nivel_calidad} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all">
-                      <option value="Premium">Premium</option>
-                      <option value="Económica">Económica</option>
-                      <option value="Original OEM">Original OEM</option>
-                    </select>
-                  </div>
-                </div>
-
+              <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200 space-y-6 shadow-inner border-t-4 border-t-autoblue">
+                
+                {/* 1. DATOS DE LA REFACCIÓN */}
                 <div>
-                  <label className="block text-xs font-black uppercase tracking-wider text-gray-500 mb-1">Descripción Técnica</label>
-                  <textarea name="descripcion" value={formData.descripcion} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm text-gray-900 h-20 focus:ring-1 focus:ring-autoblue focus:border-autoblue outline-none transition-all" placeholder="Especificaciones adicionales de la pieza..."></textarea>
+                  <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">1. Datos de la Refacción</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Tipo de Pieza</label>
+                      <select name="categoria" value={formData.categoria} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="Motor">Motor (Bujías, Bandas)</option>
+                        <option value="Suspensión">Suspensión y Dirección</option>
+                        <option value="Frenos">Frenos</option>
+                        <option value="Transmisión">Transmisión</option>
+                        <option value="Filtros">Filtros</option>
+                        <option value="Eléctrico">Eléctrico</option>
+                        <option value="Carrocería">Carrocería</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Marca de la Pieza</label>
+                      <select name="marca" value={formData.marca} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="">Selecciona marca...</option>
+                        {marcasRefacciones.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Nombre Comercial</label>
+                      <input type="text" name="nombre_comercial" value={formData.nombre_comercial} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm" placeholder="Ej. Balatas de Cerámica" />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-end pt-2">
-                  <button type="submit" className="bg-autoblue hover:bg-blue-900 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-                    Sincronizar a Base de Datos
+                {/* 2. COMPATIBILIDAD */}
+                <div>
+                  <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">2. Compatibilidad del Vehículo</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Tipo de Vehículo</label>
+                      <select name="tipo_vehiculo" value={formData.tipo_vehiculo} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="Auto">Auto / Sedán</option>
+                        <option value="Camioneta">Camioneta / SUV</option>
+                        <option value="Motocicleta">Motocicleta</option>
+                        <option value="Universal">Universal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Marca Vehículo</label>
+                      <select name="marca_vehiculo" value={formData.marca_vehiculo} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="">Selecciona marca...</option>
+                        {Object.keys(vehiculosDb).map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Modelo</label>
+                      <select name="modelo" value={formData.modelo} onChange={handleInputChange} required disabled={!formData.marca_vehiculo} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm disabled:bg-gray-100">
+                        <option value="">Selecciona modelo...</option>
+                        {formData.marca_vehiculo && vehiculosDb[formData.marca_vehiculo].map(mod => <option key={mod} value={mod}>{mod}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Año</label>
+                      <select name="anio_vehiculo" value={formData.anio_vehiculo} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="">Selecciona año...</option>
+                        {aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. STOCK Y MULTIMEDIA */}
+                <div>
+                  <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">3. Precios y Multimedia</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Stock</label>
+                      <input type="number" name="stock" min="0" step="1" value={formData.stock} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Precio Compra ($)</label>
+                      <input type="number" name="precio_lista" min="0" step="0.01" value={formData.precio_lista} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Precio Venta ($)</label>
+                      <input type="number" name="precio_oferta" min="0" step="0.01" value={formData.precio_oferta} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Calidad</label>
+                      <select name="nivel_calidad" value={formData.nivel_calidad} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="Premium">Premium</option>
+                        <option value="Original OEM">Original OEM</option>
+                        <option value="Económica">Económica</option>
+                        <option value="Genérica">Genérica</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1">Fotografía (Opcional si se mantiene la misma)</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => setImagenSeleccionada(e.target.files[0])}
+                      className="w-full bg-white border border-gray-200 rounded-lg p-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t">
+                  <button type="submit" className="bg-autoblue hover:bg-blue-900 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-colors">
+                    {idEdicion ? 'Actualizar Producto en BD' : 'Sincronizar a Base de Datos'}
                   </button>
                 </div>
               </form>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mockProducts.map((product) => (
-                <div key={product.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between hover:border-autoblue transition-colors group bg-white shadow-sm hover:shadow-md">
-                  <div className="flex gap-4">
-                    <img src={product.image} alt={product.name} className="w-16 h-16 object-cover rounded-lg border border-gray-100 bg-gray-50" />
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-autoblue transition-colors">{product.name}</p>
-                      <p className="text-gray-500 text-xs mt-1 font-medium">{product.brand}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                    <div>
-                      <p className="text-[10px] uppercase font-black tracking-wider text-gray-400">Precio Público</p>
-                      <p className="font-black text-autored">${product.price}</p>
-                    </div>
-                    <button className="text-gray-400 hover:text-autoblue p-2 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* MAPEO DE PRODUCTOS */}
+            {cargando ? (
+              <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Cargando inventario...</div>
+            ) : inventarioLocal.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 border-2 border-dashed rounded-xl">No hay piezas.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {inventarioLocal.map((item) => (
+                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between hover:border-autoblue transition-colors group bg-white shadow-sm">
+                    <div className="flex gap-4">
+                      
+                      {item.pieza?.imagen_url ? (
+                        <img 
+                          src={item.pieza.imagen_url} 
+                          alt={item.pieza.nombre_comercial} 
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-100 bg-gray-50"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-black text-xl">
+                          {item.pieza?.nombre_comercial?.charAt(0)}
+                        </div>
+                      )}
 
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-autoblue transition-colors">
+                          {item.pieza?.nombre_comercial}
+                        </p>
+                        <p className="text-gray-500 text-xs mt-1 font-medium">{item.pieza?.marca} • {item.pieza?.modelo}</p>
+                        
+                        {/* SEMÁFORO DE STOCK */}
+                        <div className="mt-2 flex items-center gap-2">
+                          <p className={`font-bold text-xs px-2 py-0.5 rounded inline-block ${
+                            item.stock === 0 ? 'bg-red-100 text-red-600' : 
+                            item.stock <= 5 ? 'bg-orange-100 text-orange-600' : 
+                            'bg-green-50 text-green-600'
+                          }`}>
+                            Stock: {item.stock}
+                          </p>
+
+                          {item.stock > 0 && item.stock <= 5 && (
+                            <span className="text-[10px] font-black text-orange-600 uppercase flex items-center gap-1 animate-pulse">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                              ¡Últimas piezas!
+                            </span>
+                          )}
+
+                          {item.stock === 0 && (
+                            <span className="text-[10px] font-black text-red-600 uppercase flex items-center gap-1">
+                              Agotado
+                            </span>
+                          )}
+                        </div>
+
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-end">
+                      <div>
+                        <p className="text-[10px] uppercase font-black text-gray-400">Precio Oferta</p>
+                        <p className="font-black text-autored text-lg">${item.precio_oferta}</p>
+                      </div>
+                      
+                      {/* BOTÓN DE EDITAR */}
+                      <button 
+                        onClick={() => cargarDatosParaEdicion(item)}
+                        className="text-autoblue bg-blue-50 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Editar
+                      </button>
+                      <button 
+                        onClick={() => confirmarEliminacion(item.id)}
+                        className="text-red-600 bg-red-50 hover:bg-red-100 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1 ml-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Eliminar
+                      </button>
+
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* COMPONENTES FLOTANTES DE INTERFAZ (FUERA DE LAS TARJETAS) */}
+        {/* ========================================================= */}
+
+        {/* 1. NOTIFICACIÓN FLOTANTE ANIMADA (Centrada en la parte superior) */}
+        <div className={`fixed top-24 left-1/2 z-[100] transform -translate-x-1/2 transition-all duration-500 ${notificacion.visible ? 'translate-y-0 opacity-100' : '-translate-y-12 opacity-0 pointer-events-none'}`}>
+          <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-bold ${notificacion.tipo === 'exito' ? 'bg-green-600' : 'bg-red-600'}`}>
+            {notificacion.tipo === 'exito' ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            )}
+            {notificacion.mensaje}
+          </div>
+        </div>
+
+        {/* 2. MODAL OSCURO DE CONFIRMACIÓN DE ELIMINACIÓN */}
+        {modalEliminar.visible && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+            <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl transform transition-all">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-xl font-black text-center text-gray-900 mb-2">¿Eliminar refacción?</h3>
+              <p className="text-center text-gray-500 text-sm mb-8 font-medium">Esta acción es permanente. La pieza desaparecerá de tu almacén local y del catálogo global.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setModalEliminar({ visible: false, idProducto: null })} 
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={ejecutarEliminacion} 
+                  className="flex-1 px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                >
+                  Sí, eliminar
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
