@@ -4,9 +4,13 @@ import ChatWindow from './components/ChatWindow';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
 import Login from './pages/Login';
-import CustomerDashboard from './pages/dashboards/CustomerDashboard';
-// 1. Importamos la nueva vista
 import ProductDetail from './pages/ProductDetail'; 
+
+// 1. Importa los 3 nuevos dashboards
+import CustomerDashboard from './pages/dashboards/CustomerDashboard';
+import StoreDashboard from './pages/dashboards/StoreDashboard';
+import AdminDashboard from './pages/dashboards/AdminDashboard';
+
 
 function App() {
   return (
@@ -19,13 +23,12 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/login" element={<Login />} />
-            
-            {/* 2. Añadimos la ruta del producto detallado */}
             <Route path="/producto/:id" element={<ProductDetail />} />
             
+            {/* 2. Asigna los componentes a las rutas correspondientes */}
             <Route path="/dashboard/cliente" element={<CustomerDashboard />} />
-            <Route path="/dashboard/refaccionaria" element={<div className="p-10 text-center text-2xl">Panel de Refaccionaria (En construcción)</div>} />
-            <Route path="/dashboard/admin" element={<div className="p-10 text-center text-2xl">Panel de Admin (En construcción)</div>} />
+            <Route path="/dashboard/tienda" element={<StoreDashboard />} />
+            <Route path="/dashboard/admin" element={<AdminDashboard />} />
           </Routes>
         </main>
 

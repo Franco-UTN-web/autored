@@ -1,37 +1,106 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const navigate = useNavigate();
+  
+  // Estados para capturar lo que el usuario escribe
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (roleRoute) => {
-    navigate(roleRoute);
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Evita que la página se recargue
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Hacemos la petición real a Spring Boot
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // El backend respondió con éxito (200 OK)
+        // Aquí en el futuro puedes guardar el token JWT en localStorage
+        navigate(data.redirectUrl);
+      } else {
+        // Mostramos el error del backend (ej. Credenciales inválidas)
+        setError(data.error || 'Error al iniciar sesión');
+      }
+    } catch (err) {
+      setError('No se pudo conectar con el servidor (¿Está encendido Spring Boot?)');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-xl border border-gray-200 w-full max-w-md text-center shadow-lg">
+      <div className="bg-white p-8 rounded-xl border border-gray-200 w-full max-w-md shadow-lg">
         
         <img src="/logo.jpeg" alt="AutoRed" className="h-12 mx-auto mb-6 object-contain" />
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Acceso al Sistema</h2>
+        <p className="text-gray-500 text-center mb-6 text-sm">Ingresa tus credenciales corporativas</p>
         
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso al Sistema</h2>
-        <p className="text-gray-500 mb-8 text-sm">Selecciona tu perfil de prueba</p>
-        
-        <div className="space-y-4">
-          <button onClick={() => handleLogin('/dashboard/cliente')} className="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 hover:text-autoblue py-3 rounded-lg font-medium transition-all flex justify-center items-center gap-2 shadow-sm">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-            Entrar como Cliente
-          </button>
-          
-          <button onClick={() => handleLogin('/dashboard/refaccionaria')} className="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 hover:text-autored py-3 rounded-lg font-medium transition-all flex justify-center items-center gap-2 shadow-sm">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-            Entrar como Refaccionaria
-          </button>
+        {/* Mostramos errores si existen */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-autored text-sm px-4 py-3 rounded-lg mb-4 text-center font-medium">
+            {error}
+          </div>
+        )}
 
-          <button onClick={() => handleLogin('/dashboard/admin')} className="w-full bg-autoblue hover:bg-blue-900 border border-transparent text-white py-3 rounded-lg font-medium transition-all flex justify-center items-center gap-2 shadow-sm">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            Entrar como Admin
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
+            <input 
+              type="text" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-autoblue focus:border-transparent transition-all"
+              placeholder="Ingresa tu nombre de usuario"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-autoblue focus:border-transparent transition-all"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className={`w-full text-white py-3 rounded-lg font-bold transition-all flex justify-center items-center gap-2 shadow-sm 
+              ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-autoblue hover:bg-blue-900'}`}
+          >
+            {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
           </button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <p className="text-xs text-gray-400 font-medium">Credenciales de prueba:</p>
+          <div className="mt-2 text-xs text-gray-500 space-y-1">
+            <p>cliente@autored.com / 123</p>
+            <p>tienda@autored.com / 123</p>
+            <p>admin@autored.com / 123</p>
+          </div>
         </div>
+
       </div>
     </div>
   );
