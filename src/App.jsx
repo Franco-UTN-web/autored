@@ -1,42 +1,50 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ChatWindow from './components/ChatWindow';
+import Footer from './components/Footer';
+
+// Páginas Públicas
+import SobreNosotros from './pages/SobreNosotros';
 import Home from './pages/Home';
 import Catalog from './pages/Catalog';
-import Login from './pages/Login';
+import Login from './pages/Login'; // O AuthView, dependiendo de cómo llamaste al archivo
 import ProductDetail from './pages/ProductDetail'; 
 
-// 1. Importa los 3 nuevos dashboards
+// Páginas Privadas (Dashboards)
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/StoreDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 
-
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-autoblue selection:text-white">
+      {/* Contenedor Flexbox para mantener el Footer siempre abajo */}
+      <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans selection:bg-autoblue selection:text-white">
+        
         <Navbar />
         
-        <main>
+        {/* main con flex-grow empuja el Footer hacia el fondo */}
+        <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Home />} />
+            {/* --- RUTAS PÚBLICAS --- */}
+            <Route path="/" element={<SobreNosotros />} /> {/* Presentación Corporativa */}
+            <Route path="/inicio" element={<Home />} />    {/* Tienda y Destacados */}
             <Route path="/catalogo" element={<Catalog />} />
             <Route path="/login" element={<Login />} />
             <Route path="/producto/:id" element={<ProductDetail />} />
             
-            {/* 2. Asigna los componentes a las rutas correspondientes */}
+            {/* --- RUTAS PRIVADAS (Paneles) --- */}
             <Route path="/dashboard/cliente" element={<CustomerDashboard />} />
-            <Route path="/dashboard/tienda" element={<StoreDashboard />} />
+            <Route path="/store-dashboard" element={<StoreDashboard />} /> {/* Dejamos solo esta para la tienda */}
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
           </Routes>
         </main>
 
-        <footer className="bg-white border-t border-gray-200 py-8 text-center text-gray-500 text-sm mt-auto">
-          <p>© 2026 AutoRed. Plataforma de consulta frontend simulada.</p>
-        </footer>
-
+        <Footer />
+        
+        {/* El ChatWindow flota por encima de todo, está perfecto aquí */}
         <ChatWindow />
+        
       </div>
     </Router>
   );
