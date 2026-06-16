@@ -1,8 +1,7 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-
-// --- DICCIONARIOS LOCALES (Viven AFUERA del componente) ---
+// --- DICCIONARIOS LOCALES ---
 const vehiculosDb = {
   "Nissan": ["Versa", "Sentra", "Tsuru", "March", "NP300", "Kicks", "Tiida"],
   "Volkswagen": ["Jetta", "Golf", "Vento", "Polo", "Saveiro", "Tiguan", "Vocho"],
@@ -26,11 +25,10 @@ const marcasRefacciones = [
 // =====================================================================
 export default function StoreDashboard() {
   
-  // 1. LECTURA DEL USUARIO (A prueba de errores)
+  // 1. LECTURA DEL USUARIO
   let usuarioLogueado = null;
   try {
     const datosUsuarioJson = localStorage.getItem('user_data');
-    // Verificamos que exista y que no sea la palabra "undefined" por error
     if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
       usuarioLogueado = JSON.parse(datosUsuarioJson);
     }
@@ -45,17 +43,12 @@ export default function StoreDashboard() {
   const [activeTab, setActiveTab] = useState('catalog');
   const [showForm, setShowForm] = useState(false);
   const [inventarioLocal, setInventarioLocal] = useState([]);
+  const [inventarioGlobal, setInventarioGlobal] = useState([]); // <-- NUEVO: Para espiar a la competencia
   const [cargando, setCargando] = useState(true);
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
   const [idEdicion, setIdEdicion] = useState(null);
 
   const navigate = useNavigate();
-
-  const cerrarSesion = () => {
-    localStorage.removeItem('session_token');
-    localStorage.removeItem('user_data');
-    navigate('/login');
-  };
 
   // 3. ESTADOS DE UI ANIMADA
   const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'exito' });
@@ -75,22 +68,26 @@ export default function StoreDashboard() {
     setTimeout(() => setNotificacion({ visible: false, mensaje: '', tipo: 'exito' }), 3500);
   };
 
-  const cargarInventario = async () => {
+  // NUEVO: Función doble para traer lo local y lo global al mismo tiempo
+  const cargarInventarios = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/inventario/tienda/${ESTABLECIMIENTO_ID}`);
-      if (response.ok) {
-        const data = await response.json();
-        setInventarioLocal(data);
-      }
+      const [resLocal, resGlobal] = await Promise.all([
+        fetch(`http://localhost:8080/api/inventario/tienda/${ESTABLECIMIENTO_ID}`),
+        fetch('http://localhost:8080/api/inventario/todos')
+      ]);
+
+      if (resLocal.ok) setInventarioLocal(await resLocal.json());
+      if (resGlobal.ok) setInventarioGlobal(await resGlobal.json());
+      
     } catch (error) {
-      console.error("Error al cargar inventario:", error);
+      console.error("Error al cargar inventarios:", error);
     } finally {
       setCargando(false);
     }
   };
 
   useEffect(() => {
-    cargarInventario();
+    cargarInventarios();
   }, []);
 
   const cargarDatosParaEdicion = (item) => {
@@ -129,7 +126,7 @@ export default function StoreDashboard() {
       const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
       if (response.ok) {
         mostrarNotificacion("Producto eliminado del inventario.");
-        cargarInventario();
+        cargarInventarios(); // Recargamos ambos para mantener todo sincronizado
       } else {
         mostrarNotificacion("Error al intentar eliminar el producto.", "error");
       }
@@ -180,7 +177,7 @@ export default function StoreDashboard() {
           nivel_calidad: 'Premium', tiempo_duracion: '', stock: 1, precio_lista: 0, precio_oferta: 0,
           establecimiento_id: ESTABLECIMIENTO_ID, tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
         });
-        cargarInventario();
+        cargarInventarios();
       } else {
         mostrarNotificacion("Error en el servidor de Java.", "error");
       }
@@ -204,16 +201,10 @@ export default function StoreDashboard() {
             <span className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
               Terminal Sincronizada Automática
             </span>
-            <button 
-              onClick={cerrarSesion}
-              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold px-4 py-2 rounded-xl text-sm transition-colors shadow-sm"
-            >
-              Cerrar Sesión
-            </button>
           </div>
         </div>
 
-        {/* PESTAÑAS */}
+        {/* PESTAÑAS AMPLIADAS */}
         <div className="flex border-b border-gray-200 mb-6 gap-4 overflow-x-auto">
           <button onClick={() => setActiveTab('orders')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'orders' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Cotizaciones Entrantes
@@ -221,9 +212,13 @@ export default function StoreDashboard() {
           <button onClick={() => setActiveTab('catalog')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'catalog' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Mi Inventario Local
           </button>
+          {/* NUEVA PESTAÑA */}
+          <button onClick={() => setActiveTab('global')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'global' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
+            Explorar Competencia
+          </button>
         </div>
 
-        {/* CONTENIDO PRINCIPAL */}
+        {/* CONTENIDO PRINCIPAL: INVENTARIO LOCAL */}
         {activeTab === 'catalog' && (
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm animate-fade-in">
             <div className="flex justify-between items-center mb-6">
@@ -327,7 +322,7 @@ export default function StoreDashboard() {
               </form>
             )}
 
-            {/* MAPEO DE TARJETAS */}
+            {/* MAPEO DE TARJETAS LOCALES */}
             {cargando ? (
               <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Cargando inventario...</div>
             ) : inventarioLocal.length === 0 ? (
@@ -335,12 +330,12 @@ export default function StoreDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inventarioLocal.map((item) => (
-                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between hover:border-autoblue transition-colors group bg-white shadow-sm">
+                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between hover:border-autoblue transition-colors group bg-gray-100 shadow-sm">
                     <div className="flex gap-4">
                       {item.pieza?.imagen_url ? (
                         <img src={item.pieza.imagen_url} alt={item.pieza.nombre_comercial} className="w-16 h-16 object-cover rounded-lg border border-gray-100 bg-gray-50" />
                       ) : (
-                        <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-black text-xl">
+                        <div className="w-16 h-16 rounded-lg bg-white flex items-center justify-center text-gray-400 font-black text-xl border border-gray-200">
                           {item.pieza?.nombre_comercial?.charAt(0)}
                         </div>
                       )}
@@ -354,22 +349,85 @@ export default function StoreDashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-end">
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-end">
                       <div>
-                        <p className="text-[10px] uppercase font-black text-gray-400">Precio Oferta</p>
+                        <p className="text-[10px] uppercase font-black text-gray-500">Precio Oferta</p>
                         <p className="font-black text-red-600 text-lg">${item.precio_oferta}</p>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => cargarDatosParaEdicion(item)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1">
+                        <button onClick={() => cargarDatosParaEdicion(item)} className="text-blue-600 bg-white border border-gray-200 hover:bg-blue-50 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1">
                           Editar
                         </button>
-                        <button onClick={() => confirmarEliminacion(item.id)} className="text-red-600 bg-red-50 hover:bg-red-100 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1">
+                        <button onClick={() => confirmarEliminacion(item.id)} className="text-red-600 bg-white border border-gray-200 hover:bg-red-50 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1">
                           Eliminar
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONTENIDO PRINCIPAL: CATÁLOGO GLOBAL (NUEVO) */}
+        {activeTab === 'global' && (
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm animate-fade-in">
+            <h3 className="font-bold text-lg text-gray-900 mb-1">Catálogo Global</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium">Monitorea los precios del mercado y administra tus propias publicaciones.</p>
+
+            {cargando ? (
+              <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Cargando catálogo mundial...</div>
+            ) : inventarioGlobal.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 border-2 border-dashed rounded-xl">El catálogo global está vacío.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {inventarioGlobal.map((item) => {
+                  const esMia = item.establecimiento_id === ESTABLECIMIENTO_ID;
+
+                  return (
+                    <div key={item.id} className={`border rounded-lg p-4 flex flex-col justify-between transition-colors shadow-sm ${esMia ? 'border-autoblue bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <div className="flex gap-4">
+                        {item.pieza?.imagen_url ? (
+                          <img src={item.pieza.imagen_url} alt={item.pieza.nombre_comercial} className="w-16 h-16 object-cover rounded-lg border border-gray-100 bg-gray-50" />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 font-black text-xl border border-gray-200">
+                            {item.pieza?.nombre_comercial?.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          {esMia && <span className="bg-autoblue text-white text-[9px] font-black uppercase px-2 py-0.5 rounded mb-1 inline-block">Tu Publicación</span>}
+                          <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{item.pieza?.nombre_comercial}</p>
+                          <p className="text-gray-500 text-xs mt-1 font-medium">{item.pieza?.marca} • {item.pieza?.modelo}</p>
+                        </div>
+                      </div>
+                      
+                      <div className={`mt-4 pt-4 border-t flex justify-between items-end ${esMia ? 'border-blue-200' : 'border-gray-100'}`}>
+                        <div>
+                          <p className="text-[10px] uppercase font-black text-gray-500">Precio Público</p>
+                          <p className="font-black text-gray-900 text-lg">${item.precio_oferta}</p>
+                        </div>
+                        
+                        {/* BOTÓN INTELIGENTE: Si es tuya, editas; si es de competencia, solo ves detalles */}
+                        {esMia ? (
+                          <button 
+                            onClick={() => { setActiveTab('catalog'); cargarDatosParaEdicion(item); }} 
+                            className="text-autoblue bg-white border border-autoblue hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
+                          >
+                            Editar Mi Pieza
+                          </button>
+                        ) : (
+                          <Link 
+                            to={`/producto/${item.id}`} 
+                            className="text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-200 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors"
+                          >
+                            Ver Competencia
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

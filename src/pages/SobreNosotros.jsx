@@ -24,7 +24,7 @@ export default function SobreNosotros() {
         
         <div className="flex-1 w-full max-w-md md:max-w-none flex justify-center">
           <div className="relative bg-gray-50 p-6 rounded-3xl border border-gray-100 shadow-sm w-full">
-            <img src="/logo.jpeg" alt="AutoRed Corporativo" className="w-full h-64 object-contain rounded-2xl opacity-90 filter drop-shadow-sm" />
+            <img src="/logo2.jpeg" alt="AutoRed Corporativo" className="w-full h-64 object-contain rounded-2xl opacity-90 filter drop-shadow-sm" />
           </div>
         </div>
       </section>

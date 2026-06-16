@@ -12,25 +12,30 @@ export default function AuthView() {
   const navigate = useNavigate();
 
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o';
-  const SUPABASE_AUTH_URL = 'https://rdhntqsabwcbulnapfcg.supabase.co/auth/v1';
+  const SUPABASE_URL = 'https://rdhntqsabwcbulnapfcg.supabase.co';
+  const SUPABASE_AUTH_URL = `${SUPABASE_URL}/auth/v1`;
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    
+    if (activeTab === 'signup' && fullName.trim() === '') {
+      setErrorMsg('Por favor, ingresa tu Nombre Completo.');
+      return;
+    }
+
     setCargando(true);
     setErrorMsg('');
 
     let endpoint = activeTab === 'login' ? '/token?grant_type=password' : '/signup';
     let body = { email, password };
-
+    
     if (activeTab === 'signup') {
-      body = {
-        ...body,
-        options: {
-          data: {
-            full_name: fullName,
-            role: 'comprador' 
-          }
-        }
+      // Mandamos el nombre de todas las formas posibles para que el Trigger de Supabase no falle
+      body.data = {
+        nombre: fullName,
+        full_name: fullName,
+        name: fullName,
+        role: 'comprador' 
       };
     }
 
@@ -52,22 +57,88 @@ export default function AuthView() {
 
       if (activeTab === 'login') {
         localStorage.setItem('session_token', data.access_token);
+
+        // 🔥 LA MAGIA ESTÁ AQUÍ 🔥
+        // Consultamos tu tabla 'perfiles' pública para traer los datos reales y frescos
+        try {
+          const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${data.user.id}&select=*`, {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${data.access_token}`
+            }
+          });
+          
+          if (perfilRes.ok) {
+            const perfilData = await perfilRes.json();
+            if (perfilData && perfilData.length > 0) {
+              // Sobrescribimos la mochila del usuario con la verdad de la tabla
+              data.user.user_metadata = {
+                ...data.user.user_metadata,
+                role: perfilData[0].rol || 'comprador',
+                nombre: perfilData[0].nombre || data.user.user_metadata?.nombre
+              };
+            }
+          }
+        } catch (err) {
+          console.warn("No se pudo cruzar la info con la tabla perfiles", err);
+        }
+
+        // Ahora sí, guardamos en memoria el usuario con su rol de tabla
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
-        const userRole = data.user?.user_metadata?.role || 'comprador';
+        const userRole = data.user?.user_metadata?.role;
 
+        // Redirección inteligente
         if (userRole === 'tienda') {
-          navigate('/store-dashboard'); 
+          window.location.href = '/store-dashboard'; 
+        } else if (userRole === 'admin') {
+          window.location.href = '/dashboard/admin';
         } else {
-          navigate('/catalog'); 
+          window.location.href = '/inicio'; 
         }
       } else {
-        // Al registrarse con éxito, cambiamos a la pestaña de login y mostramos un aviso
         setActiveTab('login');
-        setErrorMsg('¡Cuenta creada! Revisa tu correo para confirmar o inicia sesión directamente si desactivaste la confirmación.');
+        setErrorMsg('¡Cuenta creada! Inicia sesión para continuar.');
+        setEmail('');
+        setPassword('');
+        setFullName('');
       }
 
     } catch (error) {
+      setErrorMsg(error.message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${SUPABASE_AUTH_URL}/authorize?provider=google&redirect_to=${window.location.origin}/inicio`;
+  };
+
+  const handlePasswordRecovery = async () => {
+    if (!email) {
+      setErrorMsg('Por favor, ingresa tu correo electrónico arriba para enviar el enlace de recuperación.');
+      return;
+    }
+    setCargando(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`${SUPABASE_AUTH_URL}/recover`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error_description || 'Error al enviar correo de recuperación');
+      }
+      
+      setErrorMsg('¡Enlace enviado! Revisa tu bandeja de entrada para restablecer tu contraseña.');
+    } catch(error) {
       setErrorMsg(error.message);
     } finally {
       setCargando(false);
@@ -78,9 +149,8 @@ export default function AuthView() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans p-4">
       <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200">
         
-        {/* --- LADO IZQUIERDO: Presentación (Azul Corporativo AutoRed) --- */}
+        {/* --- LADO IZQUIERDO --- */}
         <div className="w-full md:w-1/2 bg-autoblue p-10 flex flex-col justify-center items-center text-white text-center relative overflow-hidden">
-          {/* Elemento decorativo de fondo */}
           <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-white opacity-5 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-blue-900 opacity-20 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -101,14 +171,13 @@ export default function AuthView() {
           </div>
         </div>
 
-        {/* --- LADO DERECHO: Formulario (Blanco Limpio) --- */}
+        {/* --- LADO DERECHO --- */}
         <div className="w-full md:w-1/2 bg-white p-10 flex flex-col justify-center">
           
           <div className="flex justify-center mb-6">
             <img src="/logo.jpeg" alt="AutoRed Logo" className="h-16 object-contain" />
           </div>
 
-          {/* Pestañas de Navegación */}
           <div className="mb-8 flex justify-center gap-8 border-b border-gray-100 pb-2">
             <button 
               onClick={() => { setActiveTab('login'); setErrorMsg(''); }} 
@@ -126,9 +195,9 @@ export default function AuthView() {
           </div>
 
           {errorMsg && (
-            <div className={`mb-6 p-3 border rounded-xl text-xs font-bold flex items-center gap-2 ${errorMsg.includes('creada') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600 animate-shake'}`}>
+            <div className={`mb-6 p-3 border rounded-xl text-xs font-bold flex items-center gap-2 ${errorMsg.includes('creada') || errorMsg.includes('Enlace') ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-600 animate-shake'}`}>
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {errorMsg.includes('creada') 
+                {errorMsg.includes('creada') || errorMsg.includes('Enlace')
                   ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 }
@@ -183,7 +252,14 @@ export default function AuthView() {
                   <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 text-autoblue focus:ring-autoblue" />
                   <label htmlFor="remember" className="text-xs text-gray-500 font-bold cursor-pointer">Recordarme</label>
                 </div>
-                <button type="button" className="text-xs text-autoblue font-black hover:text-blue-800 transition-colors">¿Olvidaste tu contraseña?</button>
+                {/* BOTÓN RECUPERAR CONTRASEÑA */}
+                <button 
+                  type="button" 
+                  onClick={handlePasswordRecovery}
+                  className="text-xs text-autoblue font-black hover:text-blue-800 transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
               </div>
             )}
 
@@ -199,11 +275,15 @@ export default function AuthView() {
               )}
             </button>
             
-            {/* Opcional: Separador para login social en el futuro */}
             {activeTab === 'login' && (
               <div className="mt-6 pt-6 border-t border-gray-100 text-center animate-fade-in">
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-4">O continúa con</p>
-                <button type="button" className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-sm">
+                {/* BOTÓN GOOGLE */}
+                <button 
+                  type="button" 
+                  onClick={handleGoogleLogin}
+                  className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-sm"
+                >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

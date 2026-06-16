@@ -1,130 +1,129 @@
+import { useState, useEffect } from 'react';
+
 export default function AdminDashboard() {
+  const [kpis, setKpis] = useState({ usuarios: 0, refaccionarias: 0, volumen: 0 });
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  // Simulamos la carga de datos desde tu Spring Boot
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        // Aquí pediremos los KPIs reales a Java
+        // const resKpis = await fetch('http://localhost:8080/api/admin/kpis');
+        setKpis({ usuarios: 124, refaccionarias: 15, volumen: 45000 });
+
+        // Aquí pediremos SOLO las tiendas que están en estado "PENDIENTE"
+        // const resSolicitudes = await fetch('http://localhost:8080/api/establecimientos/pendientes');
+        // Por ahora lo simulamos:
+        setSolicitudes([
+          { id: '1', nombre: 'AutoPartes El Güero', rfc: 'AUGE891023XXX' },
+          { id: '2', nombre: 'Mecánica Total Sur', rfc: 'METS920512YYY' }
+        ]);
+      } catch (error) {
+        console.error("Error cargando panel de admin", error);
+      } finally {
+        setCargando(false);
+      }
+    };
+    fetchAdminData();
+  }, []);
+
+  const handleAprobar = async (id) => {
+    // Aquí llamaremos a tu Java: fetch(`http://localhost:8080/api/establecimientos/aprobar/${id}`, { method: 'PUT' })
+    console.log(`Aprobando tienda con ID: ${id}`);
+    // Quitamos la solicitud de la pantalla visualmente
+    setSolicitudes(solicitudes.filter(sol => sol.id !== id));
+    alert("Negocio aprobado exitosamente");
+  };
+
+  const handleRechazar = async (id) => {
+    // Aquí llamaremos a tu Java: fetch(`http://localhost:8080/api/establecimientos/rechazar/${id}`, { method: 'PUT' })
+    console.log(`Rechazando tienda con ID: ${id}`);
+    setSolicitudes(solicitudes.filter(sol => sol.id !== id));
+  };
+
   return (
     <div className="py-10 bg-gray-50 min-h-screen font-sans">
-      <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-3xl font-black text-black mb-8 border-b border-gray-200 pb-4">Panel de Control Global (Admin)</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* ENCABEZADO */}
+        <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Panel de Control Global</h1>
+            <p className="text-gray-500 font-medium mt-1">Supervisión administrativa de AutoRed</p>
+          </div>
+        </div>
 
-        {/* KPIs Generales */}
+        {/* KPIs GENERALES */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 text-sm font-bold mb-1">Usuarios Totales</p>
-                <p className="text-3xl font-black text-black">12,458</p>
+                <p className="text-gray-500 text-sm font-bold mb-1 uppercase tracking-wider">Usuarios Totales</p>
+                <p className="text-3xl font-black text-gray-900">{kpis.usuarios}</p>
               </div>
-              <div className="p-2 bg-yellow-50 rounded-lg text-yellow-600 shadow-sm">
+              <div className="p-3 bg-blue-50 rounded-xl text-autoblue shadow-sm">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
               </div>
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-transform hover:-translate-y-1">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 text-sm font-bold mb-1">Refaccionarias</p>
-                <p className="text-3xl font-black text-black">342</p>
+                <p className="text-gray-500 text-sm font-bold mb-1 uppercase tracking-wider">Refaccionarias</p>
+                <p className="text-3xl font-black text-gray-900">{kpis.refaccionarias}</p>
               </div>
-              <div className="p-2 bg-gray-100 rounded-lg text-black shadow-sm">
+              <div className="p-3 bg-gray-100 rounded-xl text-gray-700 shadow-sm">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border border-red-500 shadow-md md:col-span-2 bg-gradient-to-r from-red-500 to-red-600 text-white">
-            <p className="text-red-100 text-sm font-bold mb-1">Volumen de Transacciones (Mes)</p>
-            <p className="text-3xl font-black">$1.2M <span className="text-lg font-medium text-red-200">MXN</span></p>
+          <div className="bg-autoblue p-6 rounded-xl border border-blue-900 shadow-md md:col-span-2 text-white relative overflow-hidden transition-transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-bl-full"></div>
+            <p className="text-blue-200 text-sm font-bold mb-1 uppercase tracking-wider relative z-10">Volumen de Transacciones (Mes)</p>
+            <p className="text-4xl font-black relative z-10">${kpis.volumen.toLocaleString()} <span className="text-xl font-medium text-blue-200">MXN</span></p>
           </div>
         </div>
 
-        {/* Gestión Rápida y Gráfica */}
+        {/* GESTIÓN RÁPIDA */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           {/* Aprobación de Negocios */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <h3 className="font-bold text-lg text-black mb-4">Aprobación de Nuevos Negocios</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 border border-gray-100 rounded-lg bg-gray-50">
-                <div>
-                  <p className="font-bold text-black">AutoPartes "El Güero"</p>
-                  <p className="text-xs text-gray-500 font-medium">RFC: AUGE891023...</p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-black hover:bg-gray-200 p-2 rounded-lg transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                  <button className="text-pink-600 hover:bg-pink-50 p-2 rounded-lg transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Gráfica Simulada con Tailwind */}
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-lg text-black">Análisis Mensual</h3>
-              <button className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors">Generar Reporte Excel</button>
-            </div>
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
+            <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-autored" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              Aprobación de Nuevos Negocios
+            </h3>
             
-            {/* Contenedor de las Barras */}
-            <div className="flex-1 flex items-end justify-between gap-4 h-40 pt-4 border-b border-gray-200 pb-2">
-              
-              {/* Enero */}
-              <div className="flex flex-col items-center justify-end h-full w-full group">
-                <div className="w-full flex gap-1 items-end justify-center h-full relative">
-                  <div className="w-1/2 bg-black rounded-t-sm h-[30%] group-hover:opacity-80 transition-opacity"></div>
-                  <div className="w-1/2 bg-pink-500 rounded-t-sm h-[45%] group-hover:opacity-80 transition-opacity shadow-sm"></div>
-                </div>
-              </div>
-
-              {/* Febrero */}
-              <div className="flex flex-col items-center justify-end h-full w-full group">
-                <div className="w-full flex gap-1 items-end justify-center h-full">
-                  <div className="w-1/2 bg-black rounded-t-sm h-[40%] group-hover:opacity-80 transition-opacity"></div>
-                  <div className="w-1/2 bg-pink-500 rounded-t-sm h-[60%] group-hover:opacity-80 transition-opacity shadow-sm"></div>
-                </div>
-              </div>
-
-              {/* Marzo */}
-              <div className="flex flex-col items-center justify-end h-full w-full group">
-                <div className="w-full flex gap-1 items-end justify-center h-full">
-                  <div className="w-1/2 bg-black rounded-t-sm h-[55%] group-hover:opacity-80 transition-opacity"></div>
-                  <div className="w-1/2 bg-pink-500 rounded-t-sm h-[80%] group-hover:opacity-80 transition-opacity shadow-sm"></div>
-                </div>
-              </div>
-
-              {/* Abril */}
-              <div className="flex flex-col items-center justify-end h-full w-full group">
-                <div className="w-full flex gap-1 items-end justify-center h-full">
-                  <div className="w-1/2 bg-black rounded-t-sm h-[45%] group-hover:opacity-80 transition-opacity"></div>
-                  <div className="w-1/2 bg-pink-500 rounded-t-sm h-[70%] group-hover:opacity-80 transition-opacity shadow-sm"></div>
-                </div>
-              </div>
-
-              {/* Mayo */}
-              <div className="flex flex-col items-center justify-end h-full w-full group">
-                <div className="w-full flex gap-1 items-end justify-center h-full">
-                  <div className="w-1/2 bg-black rounded-t-sm h-[70%] group-hover:opacity-80 transition-opacity"></div>
-                  <div className="w-1/2 bg-pink-500 rounded-t-sm h-[100%] group-hover:opacity-80 transition-opacity shadow-sm"></div>
-                </div>
-              </div>
+            <div className="space-y-3 flex-1">
+              {cargando ? (
+                 <p className="text-sm text-gray-400 text-center py-4">Cargando solicitudes...</p>
+              ) : solicitudes.length === 0 ? (
+                 <p className="text-sm text-gray-400 text-center py-4">No hay negocios pendientes de aprobación.</p>
+              ) : (
+                solicitudes.map(sol => (
+                  <div key={sol.id} className="flex justify-between items-center p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white transition-colors hover:shadow-sm">
+                    <div>
+                      <p className="font-bold text-gray-900">{sol.nombre}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">RFC: {sol.rfc}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleRechazar(sol.id)} className="text-red-500 bg-white border border-gray-200 hover:bg-red-50 p-2 rounded-lg transition-colors shadow-sm" title="Rechazar">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                      </button>
+                      <button onClick={() => handleAprobar(sol.id)} className="text-green-600 bg-white border border-gray-200 hover:bg-green-50 p-2 rounded-lg transition-colors shadow-sm" title="Aprobar">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            
-            {/* Etiquetas del Eje X */}
-            <div className="flex justify-between mt-2 text-xs text-gray-400 font-bold tracking-wider">
-              <span className="w-full text-center">ENE</span>
-              <span className="w-full text-center">FEB</span>
-              <span className="w-full text-center">MAR</span>
-              <span className="w-full text-center">ABR</span>
-              <span className="w-full text-center">MAY</span>
-            </div>
-            
-            {/* Leyenda */}
-            <div className="flex justify-center gap-6 mt-6 text-xs font-bold text-gray-600">
-              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-pink-500 rounded-full shadow-sm"></span> Ventas Exitosas</div>
-              <div className="flex items-center gap-2"><span className="w-3 h-3 bg-black rounded-full"></span> Nuevos Registros</div>
-            </div>
-
           </div>
         </div>
-
       </div>
     </div>
   );

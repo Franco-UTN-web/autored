@@ -3,23 +3,61 @@ import { useNavigate, Link } from 'react-router-dom';
 
 export default function Home() {
   const [destacados, setDestacados] = useState([]);
+  const [topTiendas, setTopTiendas] = useState([]); // <-- Nuevo estado para tiendas dinámicas
   const navigate = useNavigate();
 
   // Traemos los datos reales de tu base de datos para las piezas destacadas
-  useEffect(() => {
-    const fetchDestacados = async () => {
+ useEffect(() => {
+    const fetchDatos = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/inventario/todos');
-        if (response.ok) {
-          const data = await response.json();
-          // Solo tomamos los primeros 3 productos para no saturar el inicio
-          setDestacados(data.slice(0, 3)); 
+        // 1. Hacemos DOS peticiones al mismo tiempo a tu Spring Boot
+        const [resInventario, resEstablecimientos] = await Promise.all([
+          fetch('http://localhost:8080/api/inventario/todos'),
+          // ⚠️ Verifica que esta sea la URL de tu backend para listar las tiendas
+          fetch('http://localhost:8080/api/establecimientos/todos') 
+        ]);
+
+        if (resInventario.ok) {
+          const dataInventario = await resInventario.json();
+          setDestacados(dataInventario.slice(0, 3)); 
+
+          // 2. Si las tiendas cargaron bien, armamos un diccionario rápido { "ID": "Nombre de Tienda" }
+          let diccionarioTiendas = {};
+          if (resEstablecimientos.ok) {
+            const dataEstablecimientos = await resEstablecimientos.json();
+            dataEstablecimientos.forEach(tienda => {
+              // Ajusta .nombre si en tu base de datos se llama distinto (ej. .razon_social)
+              diccionarioTiendas[tienda.id] = tienda.nombre; 
+            });
+          }
+
+          // 3. Extraemos las tiendas únicas que tengan inventario
+          const tiendasUnicas = [];
+          const idsVistos = new Set();
+
+          dataInventario.forEach(item => {
+            if (item.establecimiento_id && !idsVistos.has(item.establecimiento_id)) {
+              idsVistos.add(item.establecimiento_id);
+              
+              // 4. Magia: Buscamos el ID en el diccionario para obtener el nombre real
+              const nombreReal = diccionarioTiendas[item.establecimiento_id] || `Sucursal ${item.establecimiento_id.split('-')[0].toUpperCase()}`;
+
+              tiendasUnicas.push({
+                id: item.establecimiento_id,
+                nombre: nombreReal,
+                calificacion: (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1)
+              });
+            }
+          });
+
+          setTopTiendas(tiendasUnicas.slice(0, 3));
         }
       } catch (error) {
-        console.error("Error cargando destacados:", error);
+        console.error("Error cargando datos:", error);
       }
     };
-    fetchDestacados();
+    
+    fetchDatos();
   }, []);
 
   return (
@@ -78,7 +116,6 @@ export default function Home() {
                <div className="text-center py-10 text-gray-400 font-medium border border-dashed border-gray-200 rounded-xl">Cargando inventario...</div>
             ) : (
               destacados.map(item => (
-                // Diseño de Tarjeta Horizontal adaptado a tus datos
                 <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-6 items-center hover:shadow-md transition-all group">
                   
                   <div className="w-full sm:w-32 h-32 bg-gray-50 rounded-lg p-2 flex items-center justify-center border border-gray-100 shrink-0 relative overflow-hidden">
@@ -114,22 +151,30 @@ export default function Home() {
 
         {/* Lado Derecho: Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white border border-gray-200 p-6 rounded-2xl shadow-sm">
-            <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 mb-4 border-b border-gray-100 pb-3">Top Refaccionarias</h3>
-            <ul className="space-y-5">
-              <li className="flex justify-between items-center text-sm group cursor-pointer">
-                <span className="text-gray-700 font-bold group-hover:text-autoblue transition-colors">Autopartes Express</span>
-                <span className="text-yellow-500 font-black text-xs bg-yellow-50 px-2 py-1 rounded">★ 4.9</span>
-              </li>
-              <li className="flex justify-between items-center text-sm group cursor-pointer">
-                <span className="text-gray-700 font-bold group-hover:text-autoblue transition-colors">Mecánica Total Sur</span>
-                <span className="text-yellow-500 font-black text-xs bg-yellow-50 px-2 py-1 rounded">★ 4.7</span>
-              </li>
-              <li className="flex justify-between items-center text-sm group cursor-pointer">
-                <span className="text-gray-700 font-bold group-hover:text-autoblue transition-colors">Refaccionaria del Norte</span>
-                <span className="text-yellow-500 font-black text-xs bg-yellow-50 px-2 py-1 rounded">★ 4.5</span>
-              </li>
-            </ul>
+          
+          {/* TOP REFACCIONARIAS DINÁMICO */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider mb-5">Top Refaccionarias</h3>
+            <div className="space-y-1">
+              
+              {topTiendas.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-2">Buscando sucursales...</p>
+              ) : (
+                topTiendas.map(tienda => (
+                  <Link 
+                    key={tienda.id} 
+                    to={`/tienda/${tienda.id}`} 
+                    className="flex justify-between items-center hover:bg-gray-50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-gray-100"
+                  >
+                    <span className="font-bold text-gray-800 text-sm truncate pr-2">{tienda.nombre}</span>
+                    <span className="bg-yellow-50 text-yellow-700 text-xs font-black px-2 py-1 rounded shrink-0">
+                      ★ {tienda.calificacion}
+                    </span>
+                  </Link>
+                ))
+              )}
+
+            </div>
           </div>
           
           <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6 rounded-2xl text-center shadow-sm relative overflow-hidden">

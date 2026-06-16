@@ -5,6 +5,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // 1. Leemos la sesión
   let rol = null;
   try {
     const datosUsuarioJson = localStorage.getItem('user_data');
@@ -16,13 +17,27 @@ export default function Navbar() {
     console.warn("Sesión corrupta detectada en el Navbar.");
   }
 
+  // 2. Lógica Dinámica de Navegación
   const handleAccionPrincipal = () => {
     setIsMenuOpen(false); 
+    
     if (rol === 'tienda') {
       navigate('/store-dashboard');
+    } else if (rol === 'admin') {
+      navigate('/dashboard/admin');
+    } else if (rol === 'comprador') {
+      navigate('/dashboard/cliente'); // Mandamos al cliente a su propio panel
     } else {
-      navigate('/login');
+      navigate('/login'); // Si no hay rol, mandarlo a iniciar sesión
     }
+  };
+
+  // 3. Lógica Dinámica de Texto del Botón
+  const obtenerTextoBoton = () => {
+    if (rol === 'tienda') return 'Ir a Mi Mostrador';
+    if (rol === 'admin') return 'Panel de Control';
+    if (rol === 'comprador') return 'Mi Cuenta';
+    return 'Ingresar al Portal';
   };
 
   return (
@@ -30,10 +45,14 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
           
-          <div className="flex items-center">
+         <div className="flex items-center">
             {/* Al dar clic en el logo, te lleva a la presentación corporativa */}
-            <Link to="/">
-              <img src="/logo.jpeg" alt="AutoRed Logo" className="h-20 object-contain" />
+            <Link to="/" className="flex items-center">
+              <img 
+                src="/logo1.png" 
+                alt="AutoRed Logo" 
+                className="h-24 w-auto object-contain transform scale-[1.6] origin-left drop-shadow-sm" 
+              />
             </Link>
           </div>
 
@@ -48,8 +67,21 @@ export default function Navbar() {
                 onClick={handleAccionPrincipal}
                 className="bg-autoblue hover:bg-blue-800 text-white px-6 py-2.5 rounded-md font-medium transition-colors shadow-md"
               >
-                {rol === 'tienda' ? 'Ir a Mi Mostrador' : 'Ingresar al Portal'}
+                {obtenerTextoBoton()}
               </button>
+
+              {/* Botón rápido de cerrar sesión visible solo si estás logueado */}
+              {rol && (
+                 <button 
+                   onClick={() => {
+                     localStorage.clear();
+                     window.location.href = '/login';
+                   }}
+                   className="text-gray-400 hover:text-red-500 font-bold text-sm ml-4 transition-colors"
+                 >
+                   Cerrar Sesión
+                 </button>
+              )}
             </div>
           </div>
 
@@ -88,7 +120,7 @@ export default function Navbar() {
               onClick={() => setIsMenuOpen(false)} 
               className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50"
             >
-              Inicio Tienda
+              Inicio
             </Link>
             <Link 
               to="/catalogo" 
@@ -102,8 +134,20 @@ export default function Navbar() {
               onClick={handleAccionPrincipal}
               className="w-full text-left bg-autoblue text-white hover:bg-blue-800 block px-3 py-3 rounded-md text-base font-medium text-center mt-4 shadow-sm"
             >
-              {rol === 'tienda' ? 'Ir a Mi Mostrador' : 'Ingresar al Portal'}
+              {obtenerTextoBoton()}
             </button>
+
+            {rol && (
+               <button 
+                 onClick={() => {
+                   localStorage.clear();
+                   window.location.href = '/login';
+                 }}
+                 className="w-full text-center text-red-500 hover:bg-red-50 block px-3 py-3 rounded-md text-base font-bold mt-2 border border-red-100"
+               >
+                 Cerrar Sesión
+               </button>
+            )}
           </div>
         </div>
       )}
