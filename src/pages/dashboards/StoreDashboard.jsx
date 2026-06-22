@@ -35,15 +35,15 @@ export default function StoreDashboard() {
   } catch (error) {
     console.warn("Datos de usuario corruptos, usando sesión de respaldo.");
   }
-  const ESTABLECIMIENTO_ID = usuarioLogueado?.user_metadata?.establecimiento_id || '08440253-dabf-41b3-b30d-babf48f7974f';
   
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o'; 
 
   // 2. ESTADOS GENERALES
+  const [miEstablecimiento, setMiEstablecimiento] = useState(null); // <-- AQUÍ GUARDAREMOS TU TIENDA REAL
   const [activeTab, setActiveTab] = useState('catalog');
   const [showForm, setShowForm] = useState(false);
   const [inventarioLocal, setInventarioLocal] = useState([]);
-  const [inventarioGlobal, setInventarioGlobal] = useState([]); // <-- NUEVO: Para espiar a la competencia
+  const [inventarioGlobal, setInventarioGlobal] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
   const [idEdicion, setIdEdicion] = useState(null);
@@ -58,7 +58,7 @@ export default function StoreDashboard() {
   const [formData, setFormData] = useState({
     categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '',
     fabricante_original: '', nivel_calidad: 'Premium', tiempo_duracion: '',
-    stock: 1, precio_lista: 0, precio_oferta: 0, establecimiento_id: ESTABLECIMIENTO_ID,
+    stock: 1, precio_lista: 0, precio_oferta: 0, establecimiento_id: '',
     tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
   });
 
@@ -68,26 +68,42 @@ export default function StoreDashboard() {
     setTimeout(() => setNotificacion({ visible: false, mensaje: '', tipo: 'exito' }), 3500);
   };
 
-  // NUEVO: Función doble para traer lo local y lo global al mismo tiempo
-  const cargarInventarios = async () => {
-    try {
-      const [resLocal, resGlobal] = await Promise.all([
-        fetch(`http://localhost:8080/api/inventario/tienda/${ESTABLECIMIENTO_ID}`),
-        fetch('http://localhost:8080/api/inventario/todos')
-      ]);
+  // NUEVA FUNCIÓN: Busca la tienda y luego carga los inventarios
+  const inicializarPanel = async () => {
+    if (!usuarioLogueado) return;
 
-      if (resLocal.ok) setInventarioLocal(await resLocal.json());
-      if (resGlobal.ok) setInventarioGlobal(await resGlobal.json());
-      
+    try {
+      // 1. Buscamos cuál es la tienda que le pertenece a este usuario
+      const resEstablecimientos = await fetch('http://localhost:8080/api/establecimientos/todos');
+      if (resEstablecimientos.ok) {
+        const tiendas = await resEstablecimientos.json();
+        // Filtramos para encontrar la tuya
+        const miTienda = tiendas.find(t => t.propietario_id === usuarioLogueado.id);
+        
+        if (miTienda) {
+          setMiEstablecimiento(miTienda);
+          // Actualizamos el form data para que sepa en qué tienda guardar
+          setFormData(prev => ({ ...prev, establecimiento_id: miTienda.id }));
+
+          // 2. Ahora sí, cargamos tu inventario y el global usando TU ID real
+          const [resLocal, resGlobal] = await Promise.all([
+            fetch(`http://localhost:8080/api/inventario/tienda/${miTienda.id}`),
+            fetch('http://localhost:8080/api/inventario/todos')
+          ]);
+
+          if (resLocal.ok) setInventarioLocal(await resLocal.json());
+          if (resGlobal.ok) setInventarioGlobal(await resGlobal.json());
+        }
+      }
     } catch (error) {
-      console.error("Error al cargar inventarios:", error);
+      console.error("Error al inicializar panel:", error);
     } finally {
       setCargando(false);
     }
   };
 
   useEffect(() => {
-    cargarInventarios();
+    inicializarPanel();
   }, []);
 
   const cargarDatosParaEdicion = (item) => {
@@ -98,7 +114,7 @@ export default function StoreDashboard() {
       nombre_comercial: item.pieza?.nombre_comercial || '', descripcion: item.pieza?.descripcion || '',
       nivel_calidad: item.pieza?.nivel_calidad || 'Premium', stock: item.stock || 1,
       precio_lista: item.precio_lista || 0, precio_oferta: item.precio_oferta || 0,
-      establecimiento_id: ESTABLECIMIENTO_ID, tipo_vehiculo: item.pieza?.tipo_vehiculo || 'Auto',
+      establecimiento_id: miEstablecimiento?.id, tipo_vehiculo: item.pieza?.tipo_vehiculo || 'Auto',
       marca_vehiculo: item.pieza?.marca_vehiculo || '', modelo: item.pieza?.modelo || '',
       anio_vehiculo: item.pieza?.anio_vehiculo || '', imagen_url: item.pieza?.imagen_url || ''
     });
@@ -126,7 +142,7 @@ export default function StoreDashboard() {
       const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
       if (response.ok) {
         mostrarNotificacion("Producto eliminado del inventario.");
-        cargarInventarios(); // Recargamos ambos para mantener todo sincronizado
+        inicializarPanel(); // Recargamos para refrescar listas
       } else {
         mostrarNotificacion("Error al intentar eliminar el producto.", "error");
       }
@@ -153,6 +169,11 @@ export default function StoreDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!miEstablecimiento) {
+      mostrarNotificacion("Error: No se encontró tu tienda.", "error");
+      return;
+    }
+
     try {
       let urlFinalImagen = formData.imagen_url;
       if (imagenSeleccionada) {
@@ -175,9 +196,9 @@ export default function StoreDashboard() {
         setFormData({
           categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '', fabricante_original: '',
           nivel_calidad: 'Premium', tiempo_duracion: '', stock: 1, precio_lista: 0, precio_oferta: 0,
-          establecimiento_id: ESTABLECIMIENTO_ID, tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
+          establecimiento_id: miEstablecimiento.id, tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
         });
-        cargarInventarios();
+        inicializarPanel();
       } else {
         mostrarNotificacion("Error en el servidor de Java.", "error");
       }
@@ -191,11 +212,13 @@ export default function StoreDashboard() {
     <div className="py-10 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* ENCABEZADO */}
+        {/* ENCABEZADO DINÁMICO */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 pb-4 border-b border-gray-200 gap-4">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mostrador Digital</h1>
-            <p className="text-gray-500 font-medium mt-1">Autopartes Express — <span className="text-autoblue font-bold">Sucursal Activa</span></p>
+            <p className="text-gray-500 font-medium mt-1">
+              {cargando ? 'Cargando tu sucursal...' : (miEstablecimiento?.nombre || 'Mi Refaccionaria')} — <span className="text-autoblue font-bold">Sucursal Activa</span>
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
@@ -324,9 +347,9 @@ export default function StoreDashboard() {
 
             {/* MAPEO DE TARJETAS LOCALES */}
             {cargando ? (
-              <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Cargando inventario...</div>
+              <div className="p-8 text-center text-gray-500 font-bold animate-pulse">Cargando tu inventario...</div>
             ) : inventarioLocal.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 border-2 border-dashed rounded-xl">No hay piezas registradas en esta sucursal.</div>
+              <div className="p-8 text-center text-gray-500 border-2 border-dashed rounded-xl">Tu mostrador está vacío. Agrega tu primer producto.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inventarioLocal.map((item) => (
@@ -370,7 +393,7 @@ export default function StoreDashboard() {
           </div>
         )}
 
-        {/* CONTENIDO PRINCIPAL: CATÁLOGO GLOBAL (NUEVO) */}
+        {/* CONTENIDO PRINCIPAL: CATÁLOGO GLOBAL */}
         {activeTab === 'global' && (
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm animate-fade-in">
             <h3 className="font-bold text-lg text-gray-900 mb-1">Catálogo Global</h3>
@@ -383,7 +406,8 @@ export default function StoreDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inventarioGlobal.map((item) => {
-                  const esMia = item.establecimiento_id === ESTABLECIMIENTO_ID;
+                  // Comprobamos usando el ID de MI tienda dinámica
+                  const esMia = miEstablecimiento && item.establecimiento_id === miEstablecimiento.id;
 
                   return (
                     <div key={item.id} className={`border rounded-lg p-4 flex flex-col justify-between transition-colors shadow-sm ${esMia ? 'border-autoblue bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
@@ -408,7 +432,6 @@ export default function StoreDashboard() {
                           <p className="font-black text-gray-900 text-lg">${item.precio_oferta}</p>
                         </div>
                         
-                        {/* BOTÓN INTELIGENTE: Si es tuya, editas; si es de competencia, solo ves detalles */}
                         {esMia ? (
                           <button 
                             onClick={() => { setActiveTab('catalog'); cargarDatosParaEdicion(item); }} 

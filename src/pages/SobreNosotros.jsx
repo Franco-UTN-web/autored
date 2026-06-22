@@ -17,7 +17,7 @@ export default function SobreNosotros() {
           </p>
           <div className="flex flex-wrap gap-4 pt-2">
             <Link to="/catalogo" className="bg-autoblue hover:bg-blue-900 text-white font-black px-8 py-3.5 rounded-xl text-sm transition-all shadow-md">
-              Explorar Catálogo Global
+              Explorar Catálogo 
             </Link>
           </div>
         </div>

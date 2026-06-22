@@ -181,9 +181,9 @@ export default function Home() {
             <div className="absolute top-0 right-0 w-16 h-16 bg-blue-100 rounded-bl-full opacity-50"></div>
             <h3 className="text-autoblue font-black mb-2 text-lg relative z-10">¿Eres Distribuidor?</h3>
             <p className="text-gray-500 text-sm mb-5 font-medium leading-relaxed relative z-10">Únete a nuestra red y multiplica tus ventas de mostrador conectando tu inventario.</p>
-            <Link to="/login" className="block w-full bg-white hover:bg-autoblue border-2 border-autoblue text-autoblue hover:text-white py-2.5 rounded-xl text-sm font-black transition-all shadow-sm relative z-10">
-              Registrar Negocio
-            </Link>
+            <Link to="/registro-negocio" className="block w-full bg-white hover:bg-autoblue border-2 border-autoblue text-autoblue hover:text-white py-2.5 rounded-xl text-sm font-black transition-all shadow-sm relative z-10">
+  Registrar Negocio
+</Link>
           </div>
         </div>
       </div>

@@ -12,6 +12,8 @@ import Catalog from './pages/Catalog';
 import Login from './pages/Login'; 
 import ProductDetail from './pages/ProductDetail'; 
 import StoreProfile from './pages/StoreProfile';
+import RegistroNegocio from './pages/RegistroNegocio';
+import DirectorioSucursales from './pages/DirectorioSucursales';
 
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/StoreDashboard';
@@ -78,6 +80,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/producto/:id" element={<ProductDetail />} />
             <Route path="/tienda/:id" element={<StoreProfile />} />
+            <Route path="/registro-negocio" element={<RegistroNegocio />} />
+            <Route path="/sucursales" element={<DirectorioSucursales />} />
             
             <Route path="/dashboard/cliente" element={
               <ProtectedRoute allowedRoles={['comprador']}>
