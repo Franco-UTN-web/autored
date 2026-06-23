@@ -1,10 +1,30 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+
+// Configuración del tamaño del mapa
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+  borderRadius: '0.75rem'
+};
+
+// Centro por defecto (Ciudad de México)
+const centroPorDefecto = { lat: 19.4326, lng: -99.1332 };
 
 export default function DirectorioSucursales() {
   const [sucursales, setSucursales] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [filtroTexto, setFiltroTexto] = useState('');
+  
+  // Estados para el Mapa
+  const [mapCenter, setMapCenter] = useState(centroPorDefecto);
+  const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
+  const [coordenadasMarcador, setCoordenadasMarcador] = useState(null);
+
+  // ⚠️ AQUÍ IRÁ TU API KEY DE GOOGLE CLOUD EN EL FUTURO
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: "TU_API_KEY_DE_GOOGLE_AQUI" // <--- Reemplazar luego
+  });
 
   useEffect(() => {
     const fetchSucursales = async () => {
@@ -12,85 +32,125 @@ export default function DirectorioSucursales() {
         const response = await fetch('http://localhost:8080/api/establecimientos/todos');
         if (response.ok) {
           const data = await response.json();
-          // Filtramos para mostrar ÚNICAMENTE las que el Admin ya aprobó
-          const tiendasAprobadas = data.filter(tienda => tienda.estado === 'APROBADO');
-          setSucursales(tiendasAprobadas);
+          // Solo mostramos las tiendas que ya fueron APROBADAS por el Admin
+          const activas = data.filter(tienda => tienda.estado === 'APROBADO');
+          setSucursales(activas);
         }
       } catch (error) {
-        console.error("Error al cargar las sucursales:", error);
+        console.error("Error al cargar sucursales:", error);
       } finally {
         setCargando(false);
       }
     };
-
     fetchSucursales();
   }, []);
 
-  // Búsqueda minimalista local
-  const sucursalesFiltradas = sucursales.filter(tienda => 
-    tienda.nombre?.toLowerCase().includes(filtroTexto.toLowerCase())
-  );
+  // FUNCIÓN MAGICA: Convierte la dirección de texto a Coordenadas en el mapa
+  const ubicarEnMapa = (tienda) => {
+    setTiendaSeleccionada(tienda);
+    
+    if (!window.google) return; // Si el mapa no ha cargado, salimos
+
+    const geocoder = new window.google.maps.Geocoder();
+    const direccionCompleta = `${tienda.calle} ${tienda.numero}, ${tienda.colonia}, ${tienda.municipio}, ${tienda.estadoRep}, México`;
+
+    geocoder.geocode({ address: direccionCompleta }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const lat = results[0].geometry.location.lat();
+        const lng = results[0].geometry.location.lng();
+        const nuevasCoordenadas = { lat, lng };
+        
+        setMapCenter(nuevasCoordenadas);
+        setCoordenadasMarcador(nuevasCoordenadas);
+      } else {
+        alert("No pudimos encontrar la ubicación exacta de esta sucursal en el mapa.");
+      }
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans py-12">
+    <div className="min-h-screen bg-gray-50 py-10 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Encabezado limpio */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-gray-200 pb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Red de Distribuidores</h1>
-            <p className="text-gray-500 font-medium mt-2">Encuentra refaccionarias oficiales y visita sus mostradores digitales.</p>
-          </div>
-          
-          {/* Buscador sutil, sin barras gigantes */}
-          <div className="w-full md:w-72">
-            <input 
-              type="text" 
-              placeholder="Buscar sucursal..." 
-              value={filtroTexto}
-              onChange={(e) => setFiltroTexto(e.target.value)}
-              className="w-full bg-white border border-gray-200 text-gray-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-autoblue focus:border-transparent text-sm font-medium transition-all shadow-sm"
-            />
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Directorio de Refaccionarias</h1>
+          <p className="text-gray-500 font-medium mt-1">Encuentra la sucursal de AutoRed más cercana a tu taller.</p>
         </div>
 
-        {/* Cuadrícula de Sucursales */}
-        {cargando ? (
-          <div className="flex justify-center py-20">
-            <span className="w-10 h-10 border-4 border-autoblue border-t-transparent rounded-full animate-spin"></span>
+        <div className="flex flex-col lg:flex-row gap-6 h-[75vh]">
+          
+          {/* COLUMNA IZQUIERDA: LISTA DE TIENDAS */}
+          <div className="w-full lg:w-1/3 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-black text-gray-900">Sucursales Activas ({sucursales.length})</h3>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 p-4 space-y-4">
+              {cargando ? (
+                <div className="text-center py-10 text-gray-400 font-bold animate-pulse">Cargando directorio...</div>
+              ) : sucursales.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 font-medium">No hay sucursales operando en este momento.</div>
+              ) : (
+                sucursales.map(tienda => (
+                  <div 
+                    key={tienda.id} 
+                    onClick={() => ubicarEnMapa(tienda)}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${tiendaSeleccionada?.id === tienda.id ? 'border-autoblue bg-blue-50 ring-1 ring-autoblue shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'}`}
+                  >
+                    <h4 className="font-black text-gray-900">{tienda.nombre}</h4>
+                    <p className="text-xs text-gray-500 mt-1 font-medium line-clamp-2">
+                      {tienda.calle} #{tienda.numero}, Col. {tienda.colonia}, {tienda.municipio}, {tienda.estadoRep}. CP: {tienda.codigoPostal}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-sm">
+                      <span className="flex items-center gap-1 text-autoblue font-bold">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Ver en mapa
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        ) : sucursalesFiltradas.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center shadow-sm">
-            <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-            <h3 className="text-lg font-black text-gray-900 mb-1">No encontramos sucursales</h3>
-            <p className="text-sm text-gray-500">Prueba con otro término de búsqueda.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sucursalesFiltradas.map(tienda => (
-              <div key={tienda.id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-autoblue transition-all flex flex-col items-center text-center group">
-                
-                {/* Logo circular generado con la inicial */}
-                <div className="w-20 h-20 bg-blue-50 text-autoblue rounded-full flex items-center justify-center text-3xl font-black mb-4 border-4 border-white shadow-sm group-hover:scale-110 transition-transform">
-                  {tienda.nombre?.charAt(0).toUpperCase() || 'S'}
-                </div>
-                
-                <h3 className="font-black text-gray-900 text-lg mb-1 line-clamp-1">{tienda.nombre}</h3>
-                <p className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded mb-6 uppercase tracking-wider">
-                  Socio Verificado
-                </p>
-                
-                <Link 
-                  to={`/tienda/${tienda.id}`} 
-                  className="w-full bg-gray-50 hover:bg-autoblue text-gray-700 hover:text-white border border-gray-200 hover:border-autoblue font-bold py-2.5 rounded-xl text-sm transition-colors mt-auto"
-                >
-                  Ver Mostrador
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
 
+          {/* COLUMNA DERECHA: GOOGLE MAPS */}
+          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative flex items-center justify-center overflow-hidden">
+            {!isLoaded ? (
+              <div className="text-gray-500 font-bold animate-pulse">Cargando motor de mapas...</div>
+            ) : (
+              <GoogleMap
+                mapContainerStyle={containerStyle}
+                center={mapCenter}
+                zoom={tiendaSeleccionada ? 16 : 5}
+                options={{
+                  disableDefaultUI: false,
+                  zoomControl: true,
+                  streetViewControl: false,
+                  mapTypeControl: false,
+                }}
+              >
+                {/* Dibujamos el Pin si hay coordenadas */}
+                {coordenadasMarcador && tiendaSeleccionada && (
+                  <Marker position={coordenadasMarcador}>
+                    <InfoWindow position={coordenadasMarcador}>
+                      <div className="p-1 max-w-[200px]">
+                        <h4 className="font-black text-gray-900 text-sm">{tiendaSeleccionada.nombre}</h4>
+                        <p className="text-xs text-gray-600 mt-1">{tiendaSeleccionada.calle} #{tiendaSeleccionada.numero}</p>
+                        <a href={`https://wa.me/${tiendaSeleccionada.telefono}`} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs bg-green-500 text-white font-bold px-2 py-1 rounded block text-center">
+                          Contactar WhatsApp
+                        </a>
+                      </div>
+                    </InfoWindow>
+                  </Marker>
+                )}
+              </GoogleMap>
+            )}
+
+            {/* Aviso de API KEY (Solo para que sepas por qué sale gris al inicio) */}
+            {isLoaded && <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm text-[10px] font-bold text-gray-500 pointer-events-none">Motor: Google Maps API</div>}
+          </div>
+
+        </div>
       </div>
     </div>
   );

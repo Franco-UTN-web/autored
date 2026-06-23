@@ -42,9 +42,11 @@ export default function ProductDetail() {
     fetchProducto();
   }, [id]);
 
-  const contactarWhatsApp = (stock, precio, nombrePieza, marca) => {
+  // ACTULIZADO: Ahora mandamos también el Número de Parte por WhatsApp
+  const contactarWhatsApp = (stock, precio, nombrePieza, marca, numeroParte) => {
     const numeroTienda = "525555555555"; // En el futuro se leerá del establecimiento
-    const mensaje = `Hola, me interesa la pieza: *${nombrePieza}* (Marca: ${marca}). ¿Aún tienen stock de ${stock} piezas a $${precio}?`;
+    const numParteTexto = numeroParte ? ` (PN: ${numeroParte})` : '';
+    const mensaje = `Hola, vengo de AutoRed. Me interesa la pieza: *${nombrePieza}*${numParteTexto} Marca: ${marca}. ¿Aún tienen stock de ${stock} piezas a $${precio}?`;
     window.open(`https://wa.me/${numeroTienda}?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
@@ -94,25 +96,64 @@ export default function ProductDetail() {
                   className="w-full max-h-96 object-contain transform transition-transform duration-500 hover:scale-105"
                 />
               ) : (
-                <span className="text-gray-300 font-medium">Sin imagen disponible</span>
+                <span className="text-gray-300 font-medium font-black text-4xl opacity-50">{pieza.nombre_comercial?.charAt(0)}</span>
               )}
             </div>
 
             {/* Información del Producto */}
             <div className="p-8 lg:p-12 flex flex-col">
               <div className="flex justify-between items-start mb-4">
-                <span className="bg-blue-50 text-autoblue px-3 py-1 rounded-full border border-blue-100 font-bold text-xs tracking-wider uppercase">
-                  {pieza.marca}
-                </span>
+                
+                <div className="flex gap-2 flex-wrap">
+                  <span className="bg-blue-50 text-autoblue px-3 py-1 rounded-full border border-blue-100 font-bold text-xs tracking-wider uppercase">
+                    {pieza.marca}
+                  </span>
+                  
+                  {/* NUEVO: Etiqueta de Condición */}
+                {pieza.condicion && (
+                    <span className={`px-3 py-1 rounded-full border font-black text-xs tracking-wider uppercase flex items-center gap-1.5 shadow-sm
+                      ${pieza.condicion === 'Nueva' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
+                        pieza.condicion === 'Usada' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                        'bg-purple-50 text-purple-700 border-purple-200'}`}
+                    >
+                      {/* Icono de Brillos para Nueva */}
+                      {pieza.condicion === 'Nueva' && (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                      )}
+                      
+                      {/* Icono de Reloj para Usada */}
+                      {pieza.condicion === 'Usada' && (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      )}
+                      
+                      {/* Icono de Reciclaje para Reconstruida */}
+                      {pieza.condicion === 'Reconstruida' && (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                      )}
+                      
+                      {pieza.condicion}
+                    </span>
+                  )}
+                </div>
+
                 <span className={`px-3 py-1 rounded-full border font-bold text-xs flex items-center gap-1.5 ${stock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                   <span className={`w-2 h-2 rounded-full ${stock > 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   {stock > 0 ? 'En Stock' : 'Agotado'}
                 </span>
               </div>
 
-              <h1 className="text-3xl lg:text-4xl font-black text-gray-900 mb-4 leading-tight">
+              <h1 className="text-3xl lg:text-4xl font-black text-gray-900 mb-2 leading-tight">
                 {pieza.nombre_comercial}
               </h1>
+
+              {/* NUEVO: Número de Parte destacado */}
+              {pieza.numero_parte && (
+                <div className="mb-4">
+                  <p className="text-sm font-mono text-gray-500">
+                    No. Parte / OEM: <span className="font-bold text-autoblue bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{pieza.numero_parte}</span>
+                  </p>
+                </div>
+              )}
               
               <div className="mb-8">
                 <span className="text-4xl font-black text-autored">${precio_oferta?.toFixed(2)} <span className="text-lg text-gray-500 font-medium">MXN</span></span>
@@ -138,6 +179,14 @@ export default function ProductDetail() {
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="col-span-1 text-gray-500 font-bold">Calidad:</span>
                     <span className="col-span-2 text-gray-900 font-medium">{pieza.nivel_calidad}</span>
+                  </div>
+                )}
+                
+                {/* NUEVO: Garantía en la Ficha Técnica */}
+                {pieza.garantia && (
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="col-span-1 text-gray-500 font-bold">Garantía:</span>
+                    <span className="col-span-2 text-gray-900 font-medium">{pieza.garantia}</span>
                   </div>
                 )}
               </div>
@@ -188,10 +237,10 @@ export default function ProductDetail() {
                     </p>
                   </div>
 
-                  {/* Botones de Acción final */}
+                  {/* Botones de Acción final ACTUALIZADO */}
                   <div className="flex gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                     <button 
-                      onClick={() => contactarWhatsApp(sucursal.stock, sucursal.precio_oferta, pieza.nombre_comercial, pieza.marca)}
+                      onClick={() => contactarWhatsApp(sucursal.stock, sucursal.precio_oferta, pieza.nombre_comercial, pieza.marca, pieza.numero_parte)}
                       disabled={sucursal.stock === 0}
                       className="flex-1 sm:flex-none bg-[#25D366] hover:bg-[#1DA851] disabled:bg-gray-200 disabled:text-gray-400 text-white px-6 py-3 rounded-lg font-black transition-colors shadow-sm flex items-center justify-center gap-2"
                     >

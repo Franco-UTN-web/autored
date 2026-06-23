@@ -26,9 +26,9 @@ export default function Navbar() {
     } else if (rol === 'admin') {
       navigate('/dashboard/admin');
     } else if (rol === 'comprador') {
-      navigate('/dashboard/cliente'); // Mandamos al cliente a su propio panel
+      navigate('/dashboard/cliente'); 
     } else {
-      navigate('/login'); // Si no hay rol, mandarlo a iniciar sesión
+      navigate('/login'); 
     }
   };
 
@@ -60,7 +60,12 @@ export default function Navbar() {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               <Link to="/" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">Nosotros</Link>
-              <Link to="/inicio" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">Inicio Tienda</Link>
+              
+              {/* ¡AQUÍ ESTÁ EL CAMBIO! */}
+              <Link to="/directorio" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
+                Sucursales
+              </Link>
+              
               <Link to="/catalogo" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">Catálogo</Link>
               
               <button 
@@ -115,13 +120,16 @@ export default function Navbar() {
             >
               Nosotros
             </Link>
+            
+            {/* ¡CAMBIO EN MÓVIL TAMBIÉN! */}
             <Link 
-              to="/inicio" 
+              to="/directorio" 
               onClick={() => setIsMenuOpen(false)} 
               className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50"
             >
-              Inicio
+              Sucursales
             </Link>
+
             <Link 
               to="/catalogo" 
               onClick={() => setIsMenuOpen(false)} 

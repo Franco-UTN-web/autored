@@ -20,9 +20,6 @@ const marcasRefacciones = [
   "Bosch", "Brembo", "Gates", "LUK", "Valeo", "ACDelco", "Castrol", "KYB", "NGK", "Genérica"
 ];
 
-// =====================================================================
-// INICIO DEL COMPONENTE PRINCIPAL
-// =====================================================================
 export default function StoreDashboard() {
   
   // 1. LECTURA DEL USUARIO
@@ -39,7 +36,7 @@ export default function StoreDashboard() {
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o'; 
 
   // 2. ESTADOS GENERALES
-  const [miEstablecimiento, setMiEstablecimiento] = useState(null); // <-- AQUÍ GUARDAREMOS TU TIENDA REAL
+  const [miEstablecimiento, setMiEstablecimiento] = useState(null);
   const [activeTab, setActiveTab] = useState('catalog');
   const [showForm, setShowForm] = useState(false);
   const [inventarioLocal, setInventarioLocal] = useState([]);
@@ -54,38 +51,33 @@ export default function StoreDashboard() {
   const [notificacion, setNotificacion] = useState({ visible: false, mensaje: '', tipo: 'exito' });
   const [modalEliminar, setModalEliminar] = useState({ visible: false, idProducto: null });
 
-  // 4. ESTADO DEL FORMULARIO
+  // 4. ESTADO DEL FORMULARIO (CAMPOS EXTENDIDOS PARA COMPARADOR)
   const [formData, setFormData] = useState({
     categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '',
     fabricante_original: '', nivel_calidad: 'Premium', tiempo_duracion: '',
     stock: 1, precio_lista: 0, precio_oferta: 0, establecimiento_id: '',
-    tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
+    tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: '',
+    // Nuevas columnas estructurales
+    numero_parte: '', condicion: 'Nueva', garantia: ''
   });
 
-  // --- FUNCIONES DE LÓGICA ---
   const mostrarNotificacion = (mensaje, tipo = 'exito') => {
     setNotificacion({ visible: true, mensaje, tipo });
     setTimeout(() => setNotificacion({ visible: false, mensaje: '', tipo: 'exito' }), 3500);
   };
 
-  // NUEVA FUNCIÓN: Busca la tienda y luego carga los inventarios
   const inicializarPanel = async () => {
     if (!usuarioLogueado) return;
-
     try {
-      // 1. Buscamos cuál es la tienda que le pertenece a este usuario
       const resEstablecimientos = await fetch('http://localhost:8080/api/establecimientos/todos');
       if (resEstablecimientos.ok) {
         const tiendas = await resEstablecimientos.json();
-        // Filtramos para encontrar la tuya
         const miTienda = tiendas.find(t => t.propietario_id === usuarioLogueado.id);
         
         if (miTienda) {
           setMiEstablecimiento(miTienda);
-          // Actualizamos el form data para que sepa en qué tienda guardar
           setFormData(prev => ({ ...prev, establecimiento_id: miTienda.id }));
 
-          // 2. Ahora sí, cargamos tu inventario y el global usando TU ID real
           const [resLocal, resGlobal] = await Promise.all([
             fetch(`http://localhost:8080/api/inventario/tienda/${miTienda.id}`),
             fetch('http://localhost:8080/api/inventario/todos')
@@ -116,7 +108,10 @@ export default function StoreDashboard() {
       precio_lista: item.precio_lista || 0, precio_oferta: item.precio_oferta || 0,
       establecimiento_id: miEstablecimiento?.id, tipo_vehiculo: item.pieza?.tipo_vehiculo || 'Auto',
       marca_vehiculo: item.pieza?.marca_vehiculo || '', modelo: item.pieza?.modelo || '',
-      anio_vehiculo: item.pieza?.anio_vehiculo || '', imagen_url: item.pieza?.imagen_url || ''
+      anio_vehiculo: item.pieza?.anio_vehiculo || '', imagen_url: item.pieza?.imagen_url || '',
+      // Mapeo de nuevos campos al editar
+      numero_parte: item.pieza?.numero_parte || '', condicion: item.pieza?.condicion || 'Nueva',
+      garantia: 'Sin garantía'
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -142,7 +137,7 @@ export default function StoreDashboard() {
       const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
       if (response.ok) {
         mostrarNotificacion("Producto eliminado del inventario.");
-        inicializarPanel(); // Recargamos para refrescar listas
+        inicializarPanel();
       } else {
         mostrarNotificacion("Error al intentar eliminar el producto.", "error");
       }
@@ -196,7 +191,8 @@ export default function StoreDashboard() {
         setFormData({
           categoria: 'Motor', marca: '', nombre_comercial: '', descripcion: '', fabricante_original: '',
           nivel_calidad: 'Premium', tiempo_duracion: '', stock: 1, precio_lista: 0, precio_oferta: 0,
-          establecimiento_id: miEstablecimiento.id, tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: ''
+          establecimiento_id: miEstablecimiento.id, tipo_vehiculo: 'Auto', marca_vehiculo: '', modelo: '', anio_vehiculo: '', imagen_url: '',
+          numero_parte: '', condicion: 'Nueva', garantia: ''
         });
         inicializarPanel();
       } else {
@@ -207,7 +203,6 @@ export default function StoreDashboard() {
     }
   };
 
-  // --- RENDERIZADO HTML ---
   return (
     <div className="py-10 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -227,7 +222,7 @@ export default function StoreDashboard() {
           </div>
         </div>
 
-        {/* PESTAÑAS AMPLIADAS */}
+        {/* PESTAÑAS */}
         <div className="flex border-b border-gray-200 mb-6 gap-4 overflow-x-auto">
           <button onClick={() => setActiveTab('orders')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'orders' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Cotizaciones Entrantes
@@ -235,7 +230,6 @@ export default function StoreDashboard() {
           <button onClick={() => setActiveTab('catalog')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'catalog' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Mi Inventario Local
           </button>
-          {/* NUEVA PESTAÑA */}
           <button onClick={() => setActiveTab('global')} className={`py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap ${activeTab === 'global' ? 'border-autoblue text-autoblue' : 'border-transparent text-gray-500'}`}>
             Explorar Competencia
           </button>
@@ -254,22 +248,31 @@ export default function StoreDashboard() {
               </button>
             </div>
 
-            {/* FORMULARIO */}
+            {/* FORMULARIO ACTUALIZADO */}
             {showForm && (
               <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200 space-y-6 shadow-inner border-t-4 border-t-autoblue">
+                
+                {/* SECCIÓN 1: DATOS DE LA REFACCIÓN */}
                 <div>
                   <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">1. Datos de la Refacción</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Tipo de Pieza</label>
                       <select name="categoria" value={formData.categoria} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="Motor">Motor (Bujías, Bandas)</option><option value="Suspensión">Suspensión y Dirección</option><option value="Frenos">Frenos</option><option value="Transmisión">Transmisión</option><option value="Filtros">Filtros</option><option value="Eléctrico">Eléctrico</option><option value="Carrocería">Carrocería</option>
+                        <option value="Motor">Motor (Bujías, Bandas)</option>
+                        <option value="Suspensión">Suspensión y Dirección</option>
+                        <option value="Frenos">Frenos</option>
+                        <option value="Transmisión">Transmisión</option>
+                        <option value="Filtros">Filtros</option>
+                        <option value="Eléctrico">Eléctrico</option>
+                        <option value="Carrocería">Carrocería</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Marca de la Pieza</label>
                       <select name="marca" value={formData.marca} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="">Selecciona marca...</option>{marcasRefacciones.map(m => <option key={m} value={m}>{m}</option>)}
+                        <option value="">Selecciona marca...</option>
+                        {marcasRefacciones.map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
                     <div>
@@ -277,38 +280,78 @@ export default function StoreDashboard() {
                       <input type="text" name="nombre_comercial" value={formData.nombre_comercial} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm" placeholder="Ej. Balatas" />
                     </div>
                   </div>
+
+                  {/* NUEVOS INPUTS ADICIONALES DE ESPECIFICACIÓN */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Número de Parte / OEM</label>
+                      <input type="text" name="numero_parte" value={formData.numero_parte} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm uppercase" placeholder="Ej. 06H-103-483-D" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Condición de la Pieza</label>
+                      <select name="condicion" value={formData.condicion} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
+                        <option value="Nueva">Nueva (Caja sellada)</option>
+                        <option value="Usada">Usada (Buen estado/Yonke)</option>
+                        <option value="Reconstruida">Reconstruida (Remanufacturada)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-gray-500 mb-1">Garantía del Vendedor</label>
+                      <select 
+                        name="garantia" 
+                        value={formData.garantia} 
+                        onChange={handleInputChange} 
+                        className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm"
+                      >
+                        <option value="Sin garantía">Sin garantía</option>
+                        <option value="15 días">15 días (Piezas eléctricas/Yonke)</option>
+                        <option value="1 mes">1 mes</option>
+                        <option value="3 meses">3 meses</option>
+                        <option value="6 meses">6 meses</option>
+                        <option value="1 año">1 año (Fábrica)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
+                {/* SECCIÓN 2: COMPATIBILIDAD */}
                 <div>
                   <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">2. Compatibilidad del Vehículo</h4>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Tipo de Vehículo</label>
                       <select name="tipo_vehiculo" value={formData.tipo_vehiculo} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="Auto">Auto / Sedán</option><option value="Camioneta">Camioneta / SUV</option><option value="Motocicleta">Motocicleta</option><option value="Universal">Universal</option>
+                        <option value="Auto">Auto / Sedán</option>
+                        <option value="Camioneta">Camioneta / SUV</option>
+                        <option value="Motocicleta">Motocicleta</option>
+                        <option value="Universal">Universal</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Marca Vehículo</label>
                       <select name="marca_vehiculo" value={formData.marca_vehiculo} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="">Selecciona marca...</option>{Object.keys(vehiculosDb).map(m => <option key={m} value={m}>{m}</option>)}
+                        <option value="">Selecciona marca...</option>
+                        {Object.keys(vehiculosDb).map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Modelo</label>
                       <select name="modelo" value={formData.modelo} onChange={handleInputChange} required disabled={!formData.marca_vehiculo} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm disabled:bg-gray-100">
-                        <option value="">Selecciona modelo...</option>{formData.marca_vehiculo && vehiculosDb[formData.marca_vehiculo].map(mod => <option key={mod} value={mod}>{mod}</option>)}
+                        <option value="">Selecciona modelo...</option>
+                        {formData.marca_vehiculo && vehiculosDb[formData.marca_vehiculo].map(mod => <option key={mod} value={mod}>{mod}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Año</label>
                       <select name="anio_vehiculo" value={formData.anio_vehiculo} onChange={handleInputChange} required className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="">Selecciona año...</option>{aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
+                        <option value="">Selecciona año...</option>
+                        {aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                   </div>
                 </div>
 
+                {/* SECCIÓN 3: PRECIOS */}
                 <div>
                   <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">3. Precios y Multimedia</h4>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -327,7 +370,10 @@ export default function StoreDashboard() {
                     <div>
                       <label className="block text-xs font-black uppercase text-gray-500 mb-1">Calidad</label>
                       <select name="nivel_calidad" value={formData.nivel_calidad} onChange={handleInputChange} className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm">
-                        <option value="Premium">Premium</option><option value="Original OEM">Original OEM</option><option value="Económica">Económica</option><option value="Genérica">Genérica</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Original OEM">Original OEM</option>
+                        <option value="Económica">Económica</option>
+                        <option value="Genérica">Genérica</option>
                       </select>
                     </div>
                   </div>
@@ -365,10 +411,23 @@ export default function StoreDashboard() {
                       <div>
                         <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 group-hover:text-autoblue transition-colors">{item.pieza?.nombre_comercial}</p>
                         <p className="text-gray-500 text-xs mt-1 font-medium">{item.pieza?.marca} • {item.pieza?.modelo}</p>
+                        
+                        {/* Pequeña etiqueta visual para el Número de Parte en la tarjeta local */}
+                        {item.pieza?.numero_parte && (
+                          <p className="text-[10px] text-autoblue font-mono bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded mt-1 w-max">
+                            PN: {item.pieza.numero_parte}
+                          </p>
+                        )}
+
                         <div className="mt-2 flex items-center gap-2">
                           <p className={`font-bold text-xs px-2 py-0.5 rounded inline-block ${item.stock === 0 ? 'bg-red-100 text-red-600' : item.stock <= 5 ? 'bg-orange-100 text-orange-600' : 'bg-green-50 text-green-600'}`}>
                             Stock: {item.stock}
                           </p>
+                          {item.pieza?.condicion && (
+                            <span className="text-[10px] font-bold text-gray-600 bg-white border border-gray-200 px-1.5 py-0.5 rounded">
+                              {item.pieza.condicion}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -406,9 +465,7 @@ export default function StoreDashboard() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inventarioGlobal.map((item) => {
-                  // Comprobamos usando el ID de MI tienda dinámica
                   const esMia = miEstablecimiento && item.establecimiento_id === miEstablecimiento.id;
-
                   return (
                     <div key={item.id} className={`border rounded-lg p-4 flex flex-col justify-between transition-colors shadow-sm ${esMia ? 'border-autoblue bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
                       <div className="flex gap-4">
@@ -423,6 +480,13 @@ export default function StoreDashboard() {
                           {esMia && <span className="bg-autoblue text-white text-[9px] font-black uppercase px-2 py-0.5 rounded mb-1 inline-block">Tu Publicación</span>}
                           <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{item.pieza?.nombre_comercial}</p>
                           <p className="text-gray-500 text-xs mt-1 font-medium">{item.pieza?.marca} • {item.pieza?.modelo}</p>
+                          
+                          {/* Muestra número de parte también en el catálogo de competencia */}
+                          {item.pieza?.numero_parte && (
+                            <p className="text-[10px] text-gray-500 font-mono mt-1">
+                              No. Parte: {item.pieza.numero_parte}
+                            </p>
+                          )}
                         </div>
                       </div>
                       
