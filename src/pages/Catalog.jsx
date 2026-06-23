@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react';
 import ProductCard from '../components/ProductCard';
+import { supabase } from '../supabase';
+
+// Definimos las categorías rápidas fuera del componente para mantener limpio el código
+const CATEGORIAS_RAPIDAS = [
+  { id: 'Cualquiera', label: 'Todas las piezas' },
+  { id: 'Motor', label: 'Motor' },
+  { id: 'Frenos', label: 'Frenos' },
+  { id: 'Suspensión', label: 'Suspensión' },
+  { id: 'Eléctrico', label: 'Eléctrico' },
+  { id: 'Transmisión', label: 'Transmisión' },
+  { id: 'Accesorios', label: 'Accesorios' }
+];
 
 export default function Catalog() {
   let usuarioLogueado = null;
@@ -17,7 +29,11 @@ export default function Catalog() {
   const [error, setError] = useState(null);
   const [miTiendaId, setMiTiendaId] = useState(null); 
 
-  // --- NUEVOS ESTADOS DEL COMPARADOR ---
+  // --- ESTADOS DEL GARAJE VIRTUAL ---
+  const [misVehiculos, setMisVehiculos] = useState([]);
+  const [filtroMiVehiculo, setFiltroMiVehiculo] = useState(''); 
+
+  // --- ESTADOS DEL COMPARADOR ---
   const [listaComparacion, setListaComparacion] = useState([]);
   const [modalMatrizAbierto, setModalMatrizAbierto] = useState(false);
   const [alerta, setAlerta] = useState({ visible: false, mensaje: '' });
@@ -43,6 +59,15 @@ export default function Catalog() {
             const miTienda = tiendas.find(t => t.propietario_id === usuarioLogueado.id);
             if (miTienda) setMiTiendaId(miTienda.id);
           }
+
+          if (usuarioLogueado.user_metadata?.role === 'comprador') {
+            const { data: vehiculos } = await supabase
+              .from('vehiculos_cliente')
+              .select('*')
+              .eq('usuario_id', usuarioLogueado.id);
+            
+            if (vehiculos) setMisVehiculos(vehiculos);
+          }
         }
       } catch (error) {
         setError(error.message);
@@ -61,12 +86,9 @@ export default function Catalog() {
 
   const toggleComparacion = (producto) => {
     const yaEsta = listaComparacion.find(p => p.id === producto.id);
-    
     if (yaEsta) {
-      // Si ya está, lo quitamos
       setListaComparacion(prev => prev.filter(p => p.id !== producto.id));
     } else {
-      // Reglas para agregar uno nuevo
       if (listaComparacion.length >= 3) {
         mostrarAlerta("Solo puedes comparar hasta 3 piezas al mismo tiempo.");
         return;
@@ -79,10 +101,15 @@ export default function Catalog() {
     }
   };
 
-  // --- FILTROS ---
+  // --- FILTROS INTELIGENTES ---
   let productosFiltrados = productos.filter(item => {
     const pieza = item.pieza;
     if (!pieza) return false;
+
+    const vehiculoActivo = misVehiculos.find(v => v.id === filtroMiVehiculo);
+    const pasaMiVehiculo = !vehiculoActivo || 
+      (pieza.marca_vehiculo?.toLowerCase() === vehiculoActivo.marca?.toLowerCase() && 
+       pieza.modelo?.toLowerCase() === vehiculoActivo.modelo?.toLowerCase());
 
     const textoBusqueda = busqueda.toLowerCase();
     const pasaBusqueda = 
@@ -95,23 +122,45 @@ export default function Catalog() {
     const pasaCategoria = filtroCategoria === 'Cualquiera' || pieza.categoria === filtroCategoria;
     const pasaPrecio = item.precio_oferta <= precioMax || precioMax >= 5000;
 
-    return pasaBusqueda && pasaMarca && pasaCategoria && pasaPrecio;
+    return pasaMiVehiculo && pasaBusqueda && pasaMarca && pasaCategoria && pasaPrecio;
   });
 
   if (orden === 'menor') productosFiltrados.sort((a, b) => a.precio_oferta - b.precio_oferta);
   else if (orden === 'mayor') productosFiltrados.sort((a, b) => b.precio_oferta - a.precio_oferta);
 
   const limpiarFiltros = () => {
-    setBusqueda(''); setFiltroMarca('Cualquiera'); setFiltroCategoria('Cualquiera'); setPrecioMax(5000); setOrden('relevancia');
+    setBusqueda(''); setFiltroMarca('Cualquiera'); setFiltroCategoria('Cualquiera'); setPrecioMax(5000); setOrden('relevancia'); setFiltroMiVehiculo('');
   };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 py-8 font-sans pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="mb-8">
+        {/* ENCABEZADO */}
+        <div className="mb-6">
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">Catálogo de Autopartes</h1>
           <p className="text-gray-500 font-medium mt-1">Encuentra tu refacción y resérvala directo con el vendedor.</p>
+        </div>
+
+        {/* ======================================================== */}
+        {/* NUEVO: CARRUSEL DE CATEGORÍAS RÁPIDAS (Estilo Puma) */}
+        {/* ======================================================== */}
+        <div className="mb-8 overflow-x-auto hide-scrollbar pb-2">
+          <div className="flex gap-3 whitespace-nowrap min-w-max">
+            {CATEGORIAS_RAPIDAS.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setFiltroCategoria(cat.id)}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold border transition-all duration-300 ${
+                  filtroCategoria === cat.id 
+                    ? 'bg-gray-900 text-white border-gray-900 shadow-md transform scale-105' 
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ALERTA FLOTANTE (Errores del comparador) */}
@@ -134,6 +183,27 @@ export default function Catalog() {
             <div className="bg-white border border-gray-200 p-5 rounded-xl shadow-sm sticky top-28">
               <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-4">Filtros</h3>
               <div className="space-y-5">
+                
+                {/* FILTRO DEL GARAJE (Solo aparece si el usuario tiene autos guardados) */}
+                {misVehiculos.length > 0 && (
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg animate-fade-in">
+                    <label className="text-[10px] text-autoblue font-black block mb-2 uppercase flex items-center gap-1 tracking-wider">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                      Filtro Inteligente
+                    </label>
+                    <select 
+                      value={filtroMiVehiculo}
+                      onChange={(e) => setFiltroMiVehiculo(e.target.value)}
+                      className="w-full bg-white border border-blue-200 text-autoblue font-bold rounded-md px-2 py-2 text-xs focus:outline-none shadow-sm cursor-pointer"
+                    >
+                      <option value="">Ver todo el catálogo</option>
+                      {misVehiculos.map(v => (
+                        <option key={v.id} value={v.id}>Piezas para mi {v.marca} {v.modelo}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs text-gray-500 font-bold block mb-2">MARCA DE VEHÍCULO</label>
                   <select value={filtroMarca} onChange={(e) => setFiltroMarca(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-lg px-3 py-2 text-sm focus:border-autoblue focus:outline-none font-medium">
@@ -141,13 +211,17 @@ export default function Catalog() {
                     <option value="Volkswagen">Volkswagen</option><option value="Nissan">Nissan</option><option value="Chevrolet">Chevrolet</option><option value="Ford">Ford</option>
                   </select>
                 </div>
+                
+                {/* Este select ahora se sincroniza automáticamente con los botones de arriba */}
                 <div>
                   <label className="text-xs text-gray-500 font-bold block mb-2">TIPO DE PIEZA</label>
                   <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-lg px-3 py-2 text-sm focus:border-autoblue focus:outline-none font-medium">
-                    <option value="Cualquiera">Cualquiera</option>
-                    <option value="Frenos">Frenos</option><option value="Motor">Motor</option><option value="Suspensión">Suspensión</option>
+                    {CATEGORIAS_RAPIDAS.map(cat => (
+                      <option key={`select-${cat.id}`} value={cat.id}>{cat.label}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
                   <label className="text-xs text-gray-500 font-bold block mb-2">PRECIO MÁXIMO: <span className="text-autoblue">${precioMax >= 5000 ? '5000+' : precioMax}</span></label>
                   <input type="range" min="100" max="5000" step="100" value={precioMax} onChange={(e) => setPrecioMax(Number(e.target.value))} className="w-full accent-autoblue" />
@@ -172,7 +246,7 @@ export default function Catalog() {
             
             {!cargando && productosFiltrados.length === 0 && (
               <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
-                <p className="text-gray-500 font-medium text-lg">No se encontraron piezas.</p>
+                <p className="text-gray-500 font-medium text-lg">No se encontraron piezas con estos filtros.</p>
                 <button onClick={limpiarFiltros} className="mt-4 text-autoblue font-bold hover:underline">Restablecer búsqueda</button>
               </div>
             )}
@@ -223,112 +297,6 @@ export default function Catalog() {
                 >
                   {listaComparacion.length < 2 ? 'Selecciona 1 más...' : 'Comparar Ahora'}
                 </button>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* MODAL MATRIZ DE COMPARACIÓN */}
-        {/* ======================================================== */}
-        {modalMatrizAbierto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-in overflow-hidden">
-              
-              {/* Header Modal */}
-              <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                    <svg className="w-6 h-6 text-autoblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    Comparador Técnico
-                  </h3>
-                  <p className="text-sm text-gray-500 font-medium">Contraste de especificaciones y precios</p>
-                </div>
-                <button onClick={() => setModalMatrizAbierto(false)} className="text-gray-400 hover:text-red-500 bg-white border border-gray-200 hover:bg-red-50 p-2 rounded-full transition-colors">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-              
-              {/* Tabla Comparativa (Scrollable) */}
-              <div className="flex-1 overflow-auto p-6 bg-white">
-                <table className="w-full text-left border-collapse min-w-max">
-                  <thead>
-                    <tr>
-                      <th className="w-48 p-4 bg-gray-50 border-b-2 border-gray-200 font-black text-gray-500 uppercase tracking-wider text-xs">Especificación</th>
-                      {listaComparacion.map((item, index) => (
-                        <th key={item.id} className="p-4 border-b-2 border-gray-200 text-center w-64 align-top">
-                          {/* Botón quitar */}
-                          <div className="flex justify-end mb-2">
-                             <button onClick={() => {
-                                toggleComparacion(item);
-                                if(listaComparacion.length === 2) setModalMatrizAbierto(false);
-                             }} className="text-gray-400 hover:text-red-500"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></button>
-                          </div>
-                          <div className="h-24 bg-gray-50 rounded-lg flex items-center justify-center p-2 mb-3 border border-gray-100">
-                            {item.pieza.imagen_url ? <img src={item.pieza.imagen_url} className="max-h-full mix-blend-multiply"/> : <span className="text-gray-300 font-black text-3xl opacity-50">{item.pieza.nombre_comercial?.charAt(0)}</span>}
-                          </div>
-                          <p className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">{item.pieza.nombre_comercial}</p>
-                          <p className="text-xs text-gray-500 mt-1">{item.pieza.marca}</p>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Precio</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center font-black text-autored text-xl bg-red-50/30">${item.precio_oferta}</td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Condición</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center">
-                          <span className="bg-gray-100 border border-gray-200 text-gray-600 font-bold text-xs px-2 py-1 rounded">{item.pieza.condicion || 'No especificada'}</span>
-                        </td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Calidad</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center text-sm font-medium text-gray-800">{item.pieza.nivel_calidad || '-'}</td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Garantía</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center text-sm font-medium text-gray-600">{item.pieza.garantia || 'Sin garantía'}</td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Número de Parte (OEM)</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center">
-                           <span className="font-mono text-xs bg-blue-50 text-autoblue px-2 py-1 rounded border border-blue-100">{item.pieza.numero_parte || 'N/A'}</span>
-                        </td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Compatibilidad Base</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center text-sm text-gray-600">
-                          {item.pieza.marca_vehiculo} {item.pieza.modelo} ({item.pieza.anio_vehiculo})
-                        </td>
-                      ))}
-                    </tr>
-                    <tr className="hover:bg-gray-50 transition-colors">
-                      <td className="p-4 font-bold text-gray-700 text-sm">Disponibilidad (Stock)</td>
-                      {listaComparacion.map(item => (
-                        <td key={item.id} className="p-4 text-center">
-                          <span className={`text-xs font-bold px-2 py-1 rounded ${item.stock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                            {item.stock > 0 ? `${item.stock} piezas` : 'Agotado'}
-                          </span>
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
               </div>
 
             </div>

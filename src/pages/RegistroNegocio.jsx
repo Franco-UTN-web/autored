@@ -5,17 +5,17 @@ export default function RegistroNegocio() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(null);
   
-  // Nuevos campos en el estado
   const [formData, setFormData] = useState({ 
-    nombre: '', rfc: '', telefono: '', direccion: '' 
+    nombre: '', rfc: '', telefono: '', 
+    calle: '', numero: '', colonia: '', cp: '', ciudad: '', estado_rep: '' 
   });
   
-  // Estados para los archivos
   const [archivoCSF, setArchivoCSF] = useState(null);
   const [archivoINE, setArchivoINE] = useState(null);
 
-  const [estado, setEstado] = useState('formulario'); // 'formulario', 'cargando', 'exito', 'error'
+  const [estado, setEstado] = useState('formulario'); 
   const [mensajeError, setMensajeError] = useState('');
+  const [campoActivo, setCampoActivo] = useState('');
 
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o';
 
@@ -28,13 +28,9 @@ export default function RegistroNegocio() {
     }
   }, [navigate]);
 
-  // Función para subir archivos a Supabase Storage
   const subirDocumentoASupabase = async (file, tipo) => {
     if (!file) return null;
-    
-    // 1. Recuperamos la llave maestra (Token) del usuario que inició sesión
     const sessionToken = localStorage.getItem('session_token');
-    
     const extension = file.name.split('.').pop();
     const nombreUnico = `${usuario.id}-${tipo}-${Date.now()}.${extension}`;
     const urlUpload = `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/documentos_negocio/${nombreUnico}`;
@@ -42,61 +38,90 @@ export default function RegistroNegocio() {
     const response = await fetch(urlUpload, {
       method: 'POST',
       headers: { 
-        // 2. Usamos el token real del usuario en lugar de la llave anónima
         'Authorization': `Bearer ${sessionToken}`, 
-        'apikey': SUPABASE_ANON_KEY, // Se manda como respaldo
+        'apikey': SUPABASE_ANON_KEY,
         'Content-Type': file.type 
       },
       body: file
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Detalle del error Supabase:", errorData);
-      throw new Error(`Error al subir el documento ${tipo}`);
-    }
-    
+    if (!response.ok) throw new Error(`Error al subir el documento ${tipo}`);
     return `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/public/documentos_negocio/${nombreUnico}`;
+  };
+
+  const validarFormulario = () => {
+    // Validaciones estrictas por JavaScript
+    if (!formData.nombre.trim()) { setMensajeError("Falta ingresar el Nombre de la Refaccionaria."); return false; }
+    if (!formData.rfc.trim()) { setMensajeError("Falta ingresar el RFC."); return false; }
+    
+    const telRegex = /^\d{10}$/;
+    const telLimpio = formData.telefono.replace(/\s+/g, ''); 
+    if (!telRegex.test(telLimpio)) {
+      setMensajeError("El teléfono debe tener exactamente 10 dígitos numéricos.");
+      return false;
+    }
+
+    const rfcRegex = /^([A-ZÑ&]{3,4}) ?(?:- ?)?(\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])) ?(?:- ?)?([A-Z\d]{2})([A\d])$/;
+    if (!rfcRegex.test(formData.rfc.toUpperCase())) {
+      setMensajeError("El RFC ingresado no tiene un formato válido para México.");
+      return false;
+    }
+
+    const cpRegex = /^\d{5}$/;
+    if (!cpRegex.test(formData.cp)) {
+      setMensajeError("El Código Postal debe ser de exactamente 5 dígitos numéricos.");
+      return false;
+    }
+
+    if (!formData.calle.trim() || !formData.numero.trim() || !formData.colonia.trim() || !formData.ciudad.trim() || !formData.estado_rep) {
+      setMensajeError("Por favor, completa todos los campos de la dirección.");
+      return false;
+    }
+
+    if (!archivoCSF || !archivoINE) {
+      setMensajeError("Por favor adjunta la Constancia Fiscal y la INE.");
+      return false;
+    }
+
+    const MAX_SIZE = 5 * 1024 * 1024; 
+    if (archivoCSF.size > MAX_SIZE || archivoINE.size > MAX_SIZE) {
+      setMensajeError("Los documentos son muy pesados. El tamaño máximo por archivo es de 5MB.");
+      return false;
+    }
+
+    return true; 
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!archivoCSF || !archivoINE) {
-      setMensajeError("Por favor adjunta la Constancia Fiscal y la INE para verificar tu negocio.");
+    setMensajeError('');
+
+    if (!validarFormulario()) {
+      setEstado('error');
       return;
     }
 
     setEstado('cargando');
-    setMensajeError('');
 
     try {
-      // 1. Subimos los documentos primero
       const urlCSF = await subirDocumentoASupabase(archivoCSF, 'CSF');
       const urlINE = await subirDocumentoASupabase(archivoINE, 'INE');
 
-      // 2. Armamos el paquete completo para Java
-     // 2. Armamos el paquete completo para Java
       const payload = {
         nombre: formData.nombre,
-        rfc: formData.rfc,
-        telefono: formData.telefono,
+        rfc: formData.rfc.trim().toUpperCase(),
+        telefono: formData.telefono.replace(/\s+/g, ''),
         calle: formData.calle,
         numero: formData.numero,
         colonia: formData.colonia,
-        
-        // ¡CORRECCIÓN AQUÍ! Quitamos el guion bajo y usamos mayúscula
         codigoPostal: formData.cp, 
         ciudad: formData.ciudad,
-        
-        // ¡CORRECCIÓN AQUÍ! Quitamos el guion bajo y usamos mayúscula
         estadoRep: formData.estado_rep, 
-        
         propietario_id: usuario.id,
         doc_csf_url: urlCSF,
         doc_ine_url: urlINE
       };
 
-      // 3. Enviamos a Spring Boot
       const response = await fetch('http://localhost:8080/api/establecimientos/solicitar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +131,7 @@ export default function RegistroNegocio() {
       if (response.ok) {
         setEstado('exito');
       } else {
-        throw new Error('No se pudo enviar la solicitud al servidor.');
+        throw new Error('Tu servidor de Spring Boot rechazó la solicitud o está apagado. Verifica tu consola de Java.');
       }
     } catch (error) {
       setMensajeError(error.message);
@@ -115,6 +140,12 @@ export default function RegistroNegocio() {
   };
 
   if (!usuario) return null;
+
+  const InfoIcon = () => (
+    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -147,76 +178,121 @@ export default function RegistroNegocio() {
               </button>
             </div>
           ) : (
-            <form className="space-y-8" onSubmit={handleSubmit}>
+            <form className="space-y-8" onSubmit={handleSubmit} noValidate>
               
-              {estado === 'error' && (
-                <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold flex items-center gap-2">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                  {mensajeError}
-                </div>
-              )}
-
               {/* SECCIÓN 1: DATOS BÁSICOS */}
               <div>
                 <h3 className="text-lg font-black text-gray-900 border-b border-gray-200 pb-2 mb-4">1. Información del Negocio</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Nombre de la Refaccionaria</label>
-                    <input type="text" required value={formData.nombre} onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all" placeholder="Ej. Autopartes El Rápido" />
+                    <input 
+                      type="text" value={formData.nombre} 
+                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })} 
+                      onFocus={() => setCampoActivo('nombre')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all" placeholder="Ej. Autopartes El Rápido" 
+                    />
+                    {campoActivo === 'nombre' && (
+                      <p className="text-xs text-autoblue font-bold mt-1 animate-fade-in flex items-center gap-1.5"><InfoIcon /> Ingresa el nombre comercial oficial.</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">RFC del Negocio</label>
-                    <input type="text" required value={formData.rfc} onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all uppercase" placeholder="ABCD123456EF7" maxLength={13} />
+                    <input 
+                      type="text" value={formData.rfc} 
+                      onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })} 
+                      onFocus={() => setCampoActivo('rfc')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all uppercase" placeholder="ABCD123456EF7" maxLength={13} 
+                    />
+                    {campoActivo === 'rfc' && (
+                      <p className="text-xs text-autoblue font-bold mt-1 animate-fade-in flex items-center gap-1.5"><InfoIcon /> Registro SAT: 12 o 13 caracteres.</p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* SECCIÓN 2: CONTACTO Y UBICACIÓN */}
               <div>
-  <h3 className="text-lg font-black text-gray-900 border-b border-gray-200 pb-2 mb-4 mt-6">2. Contacto y Ubicación</h3>
-  
-  <div className="mb-4">
-    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Teléfono de Mostrador</label>
-    <input type="tel" required value={formData.telefono} onChange={(e) => setFormData({ ...formData, telefono: e.target.value })} className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all" placeholder="Ej. 55 1234 5678" />
-  </div>
+                <h3 className="text-lg font-black text-gray-900 border-b border-gray-200 pb-2 mb-4 mt-6">2. Contacto y Ubicación</h3>
+                
+                <div className="mb-4">
+                  <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Teléfono de Mostrador (10 dígitos)</label>
+                  <input 
+                    type="tel" value={formData.telefono} 
+                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })} 
+                    onFocus={() => setCampoActivo('telefono')} onBlur={() => setCampoActivo('')}
+                    className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue transition-all" placeholder="Ej. 5512345678" maxLength={10} 
+                  />
+                  {campoActivo === 'telefono' && (
+                    <p className="text-xs text-autoblue font-bold mt-1 animate-fade-in flex items-center gap-1.5"><InfoIcon /> Número a 10 dígitos sin espacios.</p>
+                  )}
+                </div>
 
-  {/* GRID DE DIRECCIÓN SEPARADA */}
-  <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-5 bg-gray-50 rounded-2xl border border-gray-200">
-    <div className="md:col-span-4">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Calle o Avenida</label>
-      <input type="text" required value={formData.calle} onChange={(e) => setFormData({ ...formData, calle: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Av. Universidad" />
-    </div>
-    <div className="md:col-span-2">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Número</label>
-      <input type="text" required value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 123 Int B" />
-    </div>
-    
-    <div className="md:col-span-3">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Colonia</label>
-      <input type="text" required value={formData.colonia} onChange={(e) => setFormData({ ...formData, colonia: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Centro" />
-    </div>
-    <div className="md:col-span-3">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Código Postal</label>
-      <input type="text" required value={formData.cp} onChange={(e) => setFormData({ ...formData, cp: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 50000" maxLength={5} />
-    </div>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="md:col-span-4">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Calle o Avenida</label>
+                    <input 
+                      type="text" value={formData.calle} 
+                      onChange={(e) => setFormData({ ...formData, calle: e.target.value })} 
+                      onFocus={() => setCampoActivo('calle')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Av. Universidad" 
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Número</label>
+                    <input 
+                      type="text" value={formData.numero} 
+                      onChange={(e) => setFormData({ ...formData, numero: e.target.value })} 
+                      onFocus={() => setCampoActivo('numero')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 123 Int B" 
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Colonia</label>
+                    <input 
+                      type="text" value={formData.colonia} 
+                      onChange={(e) => setFormData({ ...formData, colonia: e.target.value })} 
+                      onFocus={() => setCampoActivo('colonia')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Centro" 
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Código Postal</label>
+                    <input 
+                      type="text" value={formData.cp} 
+                      onChange={(e) => setFormData({ ...formData, cp: e.target.value })} 
+                      onFocus={() => setCampoActivo('cp')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 50000" maxLength={5} 
+                    />
+                  </div>
 
-    <div className="md:col-span-3">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Ciudad / Municipio</label>
-      <input type="text" required value={formData.ciudad} onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Toluca" />
-    </div>
-    <div className="md:col-span-3">
-      <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Estado</label>
-      <select required value={formData.estado_rep} onChange={(e) => setFormData({ ...formData, estado_rep: e.target.value })} className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue">
-        <option value="">Selecciona un estado...</option>
-        <option value="CDMX">Ciudad de México</option>
-        <option value="Estado de México">Estado de México</option>
-        <option value="Jalisco">Jalisco</option>
-        <option value="Nuevo León">Nuevo León</option>
-        {/* ... puedes agregar más ... */}
-      </select>
-    </div>
-  </div>
-</div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Ciudad / Municipio</label>
+                    <input 
+                      type="text" value={formData.ciudad} 
+                      onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })} 
+                      onFocus={() => setCampoActivo('ciudad')} onBlur={() => setCampoActivo('')}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Toluca" 
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Estado</label>
+                    <select 
+                      value={formData.estado_rep} 
+                      onChange={(e) => setFormData({ ...formData, estado_rep: e.target.value })} 
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue cursor-pointer"
+                    >
+                      <option value="">Selecciona un estado...</option>
+                      <option value="Aguascalientes">Aguascalientes</option>
+                      <option value="CDMX">Ciudad de México</option>
+                      <option value="Estado de México">Estado de México</option>
+                      <option value="Jalisco">Jalisco</option>
+                      <option value="Nuevo León">Nuevo León</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
 
               {/* SECCIÓN 3: DOCUMENTACIÓN ANTI-FRAUDE */}
               <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
@@ -224,22 +300,30 @@ export default function RegistroNegocio() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-900 mb-1">Constancia de Situación Fiscal (SAT)</label>
-                    <p className="text-xs text-gray-500 mb-2">Sube tu PDF o imagen reciente.</p>
                     <input type="file" accept=".pdf,image/*" onChange={(e) => setArchivoCSF(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-autoblue hover:file:bg-blue-100" />
                   </div>
                   <div className="pt-4 border-t border-blue-200">
                     <label className="block text-sm font-bold text-gray-900 mb-1">Identificación Oficial (INE)</label>
-                    <p className="text-xs text-gray-500 mb-2">Sube foto de la INE del representante legal (Frente y reverso en una sola imagen/PDF).</p>
                     <input type="file" accept=".pdf,image/*" onChange={(e) => setArchivoINE(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-white file:text-autoblue hover:file:bg-blue-100" />
                   </div>
                 </div>
               </div>
 
-              <button type="submit" disabled={estado === 'cargando'} className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-sm font-black text-white bg-autoblue hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-autoblue transition-colors">
+              {/* === CUADRO DE ERROR MUDADO AQUÍ ABAJO === */}
+              {estado === 'error' && (
+                <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold flex items-center gap-3 shadow-sm">
+                  <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                  {mensajeError}
+                </div>
+              )}
+
+              <button type="submit" disabled={estado === 'cargando'} className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-md text-sm font-black text-white bg-autoblue hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-autoblue transition-colors disabled:opacity-50">
                 {estado === 'cargando' ? (
                   <span className="flex items-center gap-2">
                     <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    Cifrando y enviando documentos...
+                    Enviando solicitud a los servidores...
                   </span>
                 ) : (
                   "Enviar Solicitud de Registro"

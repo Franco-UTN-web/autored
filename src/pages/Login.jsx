@@ -1,109 +1,120 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase';
 
-export default function AuthView() {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState(''); 
   const [activeTab, setActiveTab] = useState('login'); 
+  
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
+  const [campoActivo, setCampoActivo] = useState('');
+  
   const navigate = useNavigate();
 
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o';
-  const SUPABASE_URL = 'https://rdhntqsabwcbulnapfcg.supabase.co';
-  const SUPABASE_AUTH_URL = `${SUPABASE_URL}/auth/v1`;
-
-  const handleAuthSubmit = async (e) => {
+const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    
-    if (activeTab === 'signup' && fullName.trim() === '') {
-      setErrorMsg('Por favor, ingresa tu Nombre Completo.');
-      return;
-    }
-
     setCargando(true);
     setErrorMsg('');
 
-    let endpoint = activeTab === 'login' ? '/token?grant_type=password' : '/signup';
-    let body = { email, password };
-    
-    if (activeTab === 'signup') {
-      // Mandamos el nombre de todas las formas posibles para que el Trigger de Supabase no falle
-      body.data = {
-        nombre: fullName,
-        full_name: fullName,
-        name: fullName,
-        role: 'comprador' 
-      };
+    // --- VALIDACIONES FRONTEND ---
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setErrorMsg('Por favor, ingresa un correo electrónico válido.');
+      setCargando(false);
+      return;
+    }
+
+    // Expresión regular para: Min 6 caracteres, 1 Mayúscula, 1 Número y 1 Carácter Especial
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_.-]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres, incluir una letra mayúscula, un número y un carácter especial (ej. @, #, $, %).');
+      setCargando(false);
+      return;
     }
 
     try {
-      const response = await fetch(`${SUPABASE_AUTH_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
+      if (activeTab === 'signup') {
+        if (fullName.trim().length < 3) {
+          throw new Error('Por favor, ingresa tu Nombre Completo (mínimo 3 letras).');
+        }
 
-      const data = await response.json();
+        // 1. EXTRAEMOS 'data' Y 'error' (¡Aquí estaba el detalle!)
+        const { data, error } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: { 
+              nombre: fullName,
+              full_name: fullName,
+              role: 'comprador' 
+            }
+          }
+        });
 
-      if (!response.ok) {
-        throw new Error(data.error_description || data.message || `Error en ${activeTab === 'login' ? 'login' : 'registro'}`);
-      }
+        // 2. Intercepción de errores normales de red o contraseña
+        if (error) throw error;
 
-      if (activeTab === 'login') {
-        localStorage.setItem('session_token', data.access_token);
+        // 🔥 3. EL TRUCO: Detectar el correo duplicado leyendo 'data' 🔥
+        if (data?.user?.identities != null && data.user.identities.length === 0) {
+          throw new Error('Este correo ya está registrado en AutoRed. Por favor, cambia a "Iniciar Sesión" o recupera tu contraseña.');
+        }
 
-        // 🔥 LA MAGIA ESTÁ AQUÍ 🔥
-        // Consultamos tu tabla 'perfiles' pública para traer los datos reales y frescos
+        // Si pasa todo lo anterior, sí es una cuenta nueva y real
+        setActiveTab('login');
+        setErrorMsg('¡Cuenta creada! Revisa tu correo (y la carpeta SPAM) para verificar tu cuenta antes de iniciar sesión.');
+        setEmail('');
+        setPassword('');
+        setFullName('');
+
+      } else {
+        // 1. Inicio de sesión normal
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (error) {
+          throw new Error('Credenciales incorrectas o correo sin verificar.');
+        }
+
+
+        // Consultamos tu tabla 'perfiles' pública para traer el rol más actualizado
         try {
-          const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${data.user.id}&select=*`, {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${data.access_token}`
-            }
-          });
+          const { data: perfilData, error: perfilError } = await supabase
+            .from('perfiles')
+            .select('rol, nombre')
+            .eq('id', data.user.id)
+            .single();
           
-          if (perfilRes.ok) {
-            const perfilData = await perfilRes.json();
-            if (perfilData && perfilData.length > 0) {
-              // Sobrescribimos la mochila del usuario con la verdad de la tabla
-              data.user.user_metadata = {
-                ...data.user.user_metadata,
-                role: perfilData[0].rol || 'comprador',
-                nombre: perfilData[0].nombre || data.user.user_metadata?.nombre
-              };
-            }
+          if (perfilData && !perfilError) {
+            // Sobrescribimos los metadatos del usuario con la verdad de la tabla
+            data.user.user_metadata = {
+              ...data.user.user_metadata,
+              role: perfilData.rol || 'comprador',
+              nombre: perfilData.nombre || data.user.user_metadata?.nombre
+            };
+            console.log("Rol actualizado desde la tabla perfiles:", perfilData.rol);
           }
         } catch (err) {
           console.warn("No se pudo cruzar la info con la tabla perfiles", err);
         }
 
-        // Ahora sí, guardamos en memoria el usuario con su rol de tabla
+        // 2. Guardamos la sesión modificada en memoria
+        localStorage.setItem('session_token', data.session.access_token);
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
-        const userRole = data.user?.user_metadata?.role;
+        const userRole = data.user?.user_metadata?.role || 'comprador';
 
-        // Redirección inteligente
-        if (userRole === 'tienda') {
-          window.location.href = '/store-dashboard'; 
-        } else if (userRole === 'admin') {
-          window.location.href = '/dashboard/admin';
-        } else {
-          window.location.href = '/inicio'; 
-        }
-      } else {
-        setActiveTab('login');
-        setErrorMsg('¡Cuenta creada! Inicia sesión para continuar.');
-        setEmail('');
-        setPassword('');
-        setFullName('');
+        // 3. Redirección inteligente
+        if (userRole === 'tienda') navigate('/store-dashboard');
+        else if (userRole === 'admin') navigate('/dashboard/admin');
+        else navigate('/dashboard/cliente');
       }
-
+      
     } catch (error) {
       setErrorMsg(error.message);
     } finally {
@@ -111,32 +122,23 @@ export default function AuthView() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${SUPABASE_AUTH_URL}/authorize?provider=google&redirect_to=${window.location.origin}/inicio`;
-  };
-
   const handlePasswordRecovery = async () => {
     if (!email) {
       setErrorMsg('Por favor, ingresa tu correo electrónico arriba para enviar el enlace de recuperación.');
       return;
     }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setErrorMsg('Por favor, ingresa un correo electrónico válido.');
+      return;
+    }
+
     setCargando(true);
     setErrorMsg('');
     try {
-      const response = await fetch(`${SUPABASE_AUTH_URL}/recover`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email })
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error_description || 'Error al enviar correo de recuperación');
-      }
-      
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
       setErrorMsg('¡Enlace enviado! Revisa tu bandeja de entrada para restablecer tu contraseña.');
     } catch(error) {
       setErrorMsg(error.message);
@@ -144,6 +146,20 @@ export default function AuthView() {
       setCargando(false);
     }
   };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/inicio' }
+    });
+    if (error) setErrorMsg(error.message);
+  };
+
+  const InfoIcon = () => (
+    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans p-4">
@@ -180,14 +196,16 @@ export default function AuthView() {
 
           <div className="mb-8 flex justify-center gap-8 border-b border-gray-100 pb-2">
             <button 
-              onClick={() => { setActiveTab('login'); setErrorMsg(''); }} 
+              type="button"
+              onClick={() => { setActiveTab('login'); setErrorMsg(''); setCampoActivo(''); }} 
               className={`text-lg font-black transition-colors ${activeTab === 'login' ? 'text-autoblue border-b-2 border-autored' : 'text-gray-400 hover:text-gray-600'}`}
             >
               Iniciar Sesión
             </button>
             <span className="text-gray-300 font-light text-lg">|</span>
             <button 
-              onClick={() => { setActiveTab('signup'); setErrorMsg(''); }} 
+              type="button"
+              onClick={() => { setActiveTab('signup'); setErrorMsg(''); setCampoActivo(''); }} 
               className={`text-lg font-black transition-colors ${activeTab === 'signup' ? 'text-autoblue border-b-2 border-autored' : 'text-gray-400 hover:text-gray-600'}`}
             >
               Crear Cuenta
@@ -209,16 +227,25 @@ export default function AuthView() {
           <form onSubmit={handleAuthSubmit} className="space-y-4">
             
             {activeTab === 'signup' && (
-              <div className="animate-fade-in">
-                <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Nombre Completo</label>
-                <input 
-                  type="text" 
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required={activeTab === 'signup'} 
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-autoblue transition-all"
-                  placeholder="Ej. Juan Pérez"
-                />
+              <div className="animate-fade-in space-y-4">
+                <div>
+                  <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    onFocus={() => setCampoActivo('fullName')} 
+                    onBlur={() => setCampoActivo('')}
+                    required={activeTab === 'signup'} 
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-autoblue transition-all"
+                    placeholder="Ej. Juan Pérez"
+                  />
+                  {campoActivo === 'fullName' && (
+                    <p className="text-xs text-autoblue font-bold mt-1.5 animate-fade-in flex items-center gap-1.5">
+                      <InfoIcon /> Ingresa tu nombre y apellido reales (mínimo 3 letras).
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -228,10 +255,17 @@ export default function AuthView() {
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setCampoActivo('email')} 
+                onBlur={() => setCampoActivo('')}
                 required 
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-autoblue transition-all"
                 placeholder="nombre@ejemplo.com"
               />
+              {campoActivo === 'email' && activeTab === 'signup' && (
+                <p className="text-xs text-autoblue font-bold mt-1.5 animate-fade-in flex items-center gap-1.5">
+                  <InfoIcon /> Asegúrate de usar un correo válido para recibir el enlace de verificación.
+                </p>
+              )}
             </div>
 
             <div className="animate-fade-in">
@@ -240,10 +274,17 @@ export default function AuthView() {
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setCampoActivo('password')} 
+                onBlur={() => setCampoActivo('')}
                 required 
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-autoblue transition-all"
                 placeholder="••••••••"
               />
+              {campoActivo === 'password' && activeTab === 'signup' && (
+                <p className="text-xs text-autoblue font-bold mt-1.5 animate-fade-in flex items-center gap-1.5">
+                  <InfoIcon /> Requisitos: Mínimo 6 caracteres, una mayúscula, un número y un carácter especial.
+                </p>
+              )}
             </div>
 
             {activeTab === 'login' && (
@@ -252,7 +293,6 @@ export default function AuthView() {
                   <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 text-autoblue focus:ring-autoblue" />
                   <label htmlFor="remember" className="text-xs text-gray-500 font-bold cursor-pointer">Recordarme</label>
                 </div>
-                {/* BOTÓN RECUPERAR CONTRASEÑA */}
                 <button 
                   type="button" 
                   onClick={handlePasswordRecovery}
@@ -266,7 +306,7 @@ export default function AuthView() {
             <button 
               type="submit" 
               disabled={cargando}
-              className="w-full bg-autoblue hover:bg-blue-900 text-white font-black py-3.5 px-4 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 mt-4"
+              className="w-full bg-autoblue hover:bg-blue-900 text-white font-black py-3.5 px-4 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
             >
               {cargando ? (
                 <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -275,25 +315,23 @@ export default function AuthView() {
               )}
             </button>
             
-            {activeTab === 'login' && (
-              <div className="mt-6 pt-6 border-t border-gray-100 text-center animate-fade-in">
-                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-4">O continúa con</p>
-                {/* BOTÓN GOOGLE */}
-                <button 
-                  type="button" 
-                  onClick={handleGoogleLogin}
-                  className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-sm"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  Iniciar con Google
-                </button>
-              </div>
-            )}
+            {/* BOTÓN DE GOOGLE SIEMPRE VISIBLE */}
+            <div className="mt-6 pt-6 border-t border-gray-100 text-center animate-fade-in">
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-4">O continúa con</p>
+              <button 
+                type="button" 
+                onClick={handleGoogleLogin}
+                className="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-3 shadow-sm"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                {activeTab === 'login' ? 'Iniciar con Google' : 'Registrarse con Google'}
+              </button>
+            </div>
             
           </form>
 
