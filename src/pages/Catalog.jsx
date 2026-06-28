@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { supabase } from '../supabase';
 
@@ -102,28 +103,35 @@ export default function Catalog() {
   };
 
   // --- FILTROS INTELIGENTES ---
-  let productosFiltrados = productos.filter(item => {
-    const pieza = item.pieza;
-    if (!pieza) return false;
+  const productosFiltrados = useMemo(() => {
+    let filtrados = productos.filter(item => {
+      const pieza = item.pieza;
+      if (!pieza) return false;
 
-    const vehiculoActivo = misVehiculos.find(v => v.id === filtroMiVehiculo);
-    const pasaMiVehiculo = !vehiculoActivo || 
-      (pieza.marca_vehiculo?.toLowerCase() === vehiculoActivo.marca?.toLowerCase() && 
-       pieza.modelo?.toLowerCase() === vehiculoActivo.modelo?.toLowerCase());
+      const vehiculoActivo = misVehiculos.find(v => v.id === filtroMiVehiculo);
+      const pasaMiVehiculo = !vehiculoActivo || 
+        (pieza.marca_vehiculo?.toLowerCase() === vehiculoActivo.marca?.toLowerCase() && 
+         pieza.modelo?.toLowerCase() === vehiculoActivo.modelo?.toLowerCase());
 
-    const textoBusqueda = busqueda.toLowerCase();
-    const pasaBusqueda = 
-      pieza.nombre_comercial?.toLowerCase().includes(textoBusqueda) ||
-      pieza.marca?.toLowerCase().includes(textoBusqueda) ||
-      pieza.modelo?.toLowerCase().includes(textoBusqueda) ||
-      pieza.numero_parte?.toLowerCase().includes(textoBusqueda);
+      const textoBusqueda = busqueda.toLowerCase();
+      const pasaBusqueda = 
+        pieza.nombre_comercial?.toLowerCase().includes(textoBusqueda) ||
+        pieza.marca?.toLowerCase().includes(textoBusqueda) ||
+        pieza.modelo?.toLowerCase().includes(textoBusqueda) ||
+        pieza.numero_parte?.toLowerCase().includes(textoBusqueda);
 
-    const pasaMarca = filtroMarca === 'Cualquiera' || pieza.marca_vehiculo === filtroMarca;
-    const pasaCategoria = filtroCategoria === 'Cualquiera' || pieza.categoria === filtroCategoria;
-    const pasaPrecio = item.precio_oferta <= precioMax || precioMax >= 5000;
+      const pasaMarca = filtroMarca === 'Cualquiera' || pieza.marca_vehiculo === filtroMarca;
+      const pasaCategoria = filtroCategoria === 'Cualquiera' || pieza.categoria === filtroCategoria;
+      const pasaPrecio = item.precio_oferta <= precioMax || precioMax >= 5000;
 
-    return pasaMiVehiculo && pasaBusqueda && pasaMarca && pasaCategoria && pasaPrecio;
-  });
+      return pasaMiVehiculo && pasaBusqueda && pasaMarca && pasaCategoria && pasaPrecio;
+    });
+
+    if (orden === 'menor') filtrados.sort((a, b) => a.precio_oferta - b.precio_oferta);
+    else if (orden === 'mayor') filtrados.sort((a, b) => b.precio_oferta - a.precio_oferta);
+
+    return filtrados;
+  }, [productos, busqueda, filtroMarca, filtroCategoria, precioMax, orden, filtroMiVehiculo, misVehiculos]);
 
   if (orden === 'menor') productosFiltrados.sort((a, b) => a.precio_oferta - b.precio_oferta);
   else if (orden === 'mayor') productosFiltrados.sort((a, b) => b.precio_oferta - a.precio_oferta);
@@ -304,6 +312,90 @@ export default function Catalog() {
         )}
 
       </div>
+      {modalMatrizAbierto && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-80 p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl">
+              
+              {/* Header del Modal */}
+              <div className="flex justify-between items-center p-6 border-b border-gray-100">
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900">Comparativa de Piezas</h3>
+                  <p className="text-sm text-gray-500 font-medium mt-1">Analiza características y precios lado a lado</p>
+                </div>
+                <button 
+                  onClick={() => setModalMatrizAbierto(false)} 
+                  className="text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 p-2 rounded-full transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body del Modal - Tarjetas lado a lado */}
+              <div className="p-6 overflow-y-auto flex-1 bg-gray-50 rounded-b-2xl">
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {listaComparacion.map((item) => (
+                    <div key={`comp-${item.id}`} className="flex-1 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col hover:shadow-md transition-shadow">
+                      
+                      {/* Foto */}
+                      <div className="h-48 bg-gray-50 rounded-xl flex items-center justify-center mb-6 border border-gray-100 p-4 relative overflow-hidden">
+                        {item.pieza?.imagen_url ? (
+                          <img src={item.pieza.imagen_url} className="max-h-full object-contain" alt="pieza" />
+                        ) : (
+                          <span className="text-gray-300 font-black text-6xl">{item.pieza?.nombre_comercial?.charAt(0)}</span>
+                        )}
+                      </div>
+                      
+                      {/* Título y Precio */}
+                      <div className="text-center mb-6">
+                        <h4 className="font-black text-gray-900 text-lg mb-2 h-14 line-clamp-2 leading-tight">{item.pieza?.nombre_comercial}</h4>
+                        <p className="text-4xl font-black text-autored">${item.precio_oferta}</p>
+                      </div>
+
+                      {/* Tabla de Especificaciones */}
+                      <div className="space-y-3 flex-1 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                          <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Marca Fab.</span>
+                          <span className="font-black text-gray-900">{item.pieza?.marca}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                          <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Compatibilidad</span>
+                          <span className="font-medium text-gray-900 text-right">{item.pieza?.marca_vehiculo} {item.pieza?.modelo}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                          <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider">No. Parte (OEM)</span>
+                          <span className="font-mono font-bold text-autoblue bg-blue-50 px-1 rounded">{item.pieza?.numero_parte || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                          <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Condición</span>
+                          <span className="font-medium text-gray-900">{item.pieza?.condicion || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between pb-1">
+                          <span className="font-bold text-gray-500 uppercase text-[10px] tracking-wider">Garantía</span>
+                          <span className="font-medium text-gray-900">{item.pieza?.garantia || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      {/* Botón de Compra */}
+                      <div className="mt-6">
+                        <Link 
+                          to={`/producto/${item.id}`} 
+                          className="flex items-center justify-center gap-2 w-full bg-gray-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition-colors shadow-sm"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                          Ver Detalles
+                        </Link>
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
     </div>
   );
 }

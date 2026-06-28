@@ -3,35 +3,30 @@ import { useNavigate, Link } from 'react-router-dom';
 
 export default function Home() {
   const [destacados, setDestacados] = useState([]);
-  const [topTiendas, setTopTiendas] = useState([]); // <-- Nuevo estado para tiendas dinámicas
+  const [topTiendas, setTopTiendas] = useState([]); 
   const navigate = useNavigate();
 
-  // Traemos los datos reales de tu base de datos para las piezas destacadas
- useEffect(() => {
+  useEffect(() => {
     const fetchDatos = async () => {
       try {
-        // 1. Hacemos DOS peticiones al mismo tiempo a tu Spring Boot
         const [resInventario, resEstablecimientos] = await Promise.all([
           fetch('http://localhost:8080/api/inventario/todos'),
-          // ⚠️ Verifica que esta sea la URL de tu backend para listar las tiendas
           fetch('http://localhost:8080/api/establecimientos/todos') 
         ]);
 
         if (resInventario.ok) {
           const dataInventario = await resInventario.json();
+          // Tomamos 3 elementos para mantener el diseño balanceado en la cuadrícula
           setDestacados(dataInventario.slice(0, 3)); 
 
-          // 2. Si las tiendas cargaron bien, armamos un diccionario rápido { "ID": "Nombre de Tienda" }
           let diccionarioTiendas = {};
           if (resEstablecimientos.ok) {
             const dataEstablecimientos = await resEstablecimientos.json();
             dataEstablecimientos.forEach(tienda => {
-              // Ajusta .nombre si en tu base de datos se llama distinto (ej. .razon_social)
               diccionarioTiendas[tienda.id] = tienda.nombre; 
             });
           }
 
-          // 3. Extraemos las tiendas únicas que tengan inventario
           const tiendasUnicas = [];
           const idsVistos = new Set();
 
@@ -39,7 +34,6 @@ export default function Home() {
             if (item.establecimiento_id && !idsVistos.has(item.establecimiento_id)) {
               idsVistos.add(item.establecimiento_id);
               
-              // 4. Magia: Buscamos el ID en el diccionario para obtener el nombre real
               const nombreReal = diccionarioTiendas[item.establecimiento_id] || `Sucursal ${item.establecimiento_id.split('-')[0].toUpperCase()}`;
 
               tiendasUnicas.push({
@@ -50,7 +44,7 @@ export default function Home() {
             }
           });
 
-          setTopTiendas(tiendasUnicas.slice(0, 3));
+          setTopTiendas(tiendasUnicas.slice(0, 4)); // Subimos a 4 para llenar mejor el sidebar
         }
       } catch (error) {
         console.error("Error cargando datos:", error);
@@ -63,85 +57,120 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       
-      {/* Hero Section */}
-      <div className="relative bg-white border-b border-gray-200 py-20 shadow-sm overflow-hidden">
-        {/* Fondo decorativo sutil */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full max-w-3xl h-full bg-blue-50 opacity-30 blur-3xl pointer-events-none rounded-full"></div>
+      {/* 1. HERO SECTION RENOVADO */}
+      <div className="relative bg-white border-b border-gray-200 py-24 shadow-sm overflow-hidden">
+        <div className="absolute inset-0 z-0 opacity-30 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ef4444 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-full max-w-4xl h-full bg-gradient-to-b from-blue-50/50 to-transparent blur-3xl pointer-events-none rounded-full"></div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-6 text-gray-900 leading-tight">
-            La red automotriz más <span className="text-autored">inteligente</span>
+          <span className="inline-block bg-red-50 text-autored text-xs font-black px-4 py-2 rounded-full shadow-sm border border-red-100 mb-6 uppercase tracking-wider">
+            Tú escribes, nosotros Buscamos
+          </span>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 text-gray-900 leading-tight">
+            La red automotriz <br className="hidden md:block" /> más <span className="text-transparent bg-clip-text bg-gradient-to-r from-autored to-red-500">inteligente</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-10 font-medium">
-            Encuentra piezas, compara refaccionarias y optimiza el mantenimiento de tu vehículo en una sola plataforma.
+          <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-12 font-medium">
+            Encuentra piezas, compara refaccionarias y optimiza el mantenimiento de tu vehículo en una sola plataforma. Sin intermediarios.
           </p>
           
-          {/* Buscador Principal */}
-          <div className="max-w-3xl mx-auto bg-white p-2.5 rounded-2xl border border-gray-200 shadow-xl flex flex-col md:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="¿Qué pieza o marca buscas?" 
-              className="flex-1 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-autoblue font-medium transition-all" 
-            />
-            <select className="bg-gray-50 text-gray-700 rounded-xl px-5 py-3.5 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-autoblue font-medium font-bold">
-              <option>Todas las marcas</option>
-              <option>Volkswagen</option>
-              <option>Nissan</option>
-            </select>
+          {/* Buscador Principal Mejorado */}
+          <div className="max-w-4xl mx-auto bg-white p-3 rounded-2xl border border-gray-200 shadow-xl flex flex-col md:flex-row gap-3 transition-transform hover:-translate-y-1 duration-300">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Ej. Balatas delanteras, Filtro de aceite..." 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl pl-11 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-autoblue font-medium transition-all" 
+              />
+            </div>
+            
+            <div className="relative md:w-64 shrink-0">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+              </div>
+              <select className="w-full bg-gray-50 text-gray-700 rounded-xl pl-11 pr-4 py-4 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-autoblue font-bold appearance-none cursor-pointer">
+                <option>Todas las marcas</option>
+                <option>Volkswagen</option>
+                <option>Nissan</option>
+                <option>Chevrolet</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                <svg className="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
             <button 
               onClick={() => navigate('/catalogo')}
-              className="bg-autoblue hover:bg-blue-900 text-white px-10 py-3.5 rounded-xl font-black transition-colors shadow-md text-sm tracking-wider uppercase"
+              className="bg-autoblue hover:bg-blue-900 text-white px-10 py-4 rounded-xl font-black transition-colors shadow-md text-sm tracking-wider uppercase flex items-center justify-center gap-2 shrink-0"
             >
-              Buscar
+              Buscar Pieza
             </button>
           </div>
         </div>
       </div>
 
-      {/* Contenido Principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 lg:grid-cols-4 gap-10">
+      {/* 2. CONTENIDO PRINCIPAL */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-4 gap-12">
         
-        {/* Lado Izquierdo: Piezas Destacadas */}
+        {/* Lado Izquierdo: Piezas Destacadas (Ahora en Grid) */}
         <div className="lg:col-span-3">
           <div className="flex justify-between items-end mb-8 border-b border-gray-200 pb-4">
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Piezas Destacadas</h2>
-            <Link to="/catalogo" className="text-autoblue hover:text-blue-800 text-sm font-bold flex items-center gap-1">
-              Ver catálogo completo
+            <div>
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight">Recién Llegados</h2>
+              <p className="text-sm text-gray-500 font-medium mt-1">Descubre las refacciones más recientes en la red.</p>
+            </div>
+            <Link to="/catalogo" className="text-autoblue hover:text-blue-900 text-sm font-black flex items-center gap-1 bg-blue-50 px-4 py-2 rounded-lg transition-colors">
+              Ver todo el catálogo
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {destacados.length === 0 ? (
-               <div className="text-center py-10 text-gray-400 font-medium border border-dashed border-gray-200 rounded-xl">Cargando inventario...</div>
+               <div className="col-span-3 text-center py-20 text-gray-400 font-medium border-2 border-dashed border-gray-200 rounded-2xl bg-white">
+                 <div className="w-8 h-8 border-4 border-autoblue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                 Sincronizando inventario en tiempo real...
+               </div>
             ) : (
               destacados.map(item => (
-                <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-6 items-center hover:shadow-md transition-all group">
+                <div key={item.id} className="bg-white border border-gray-200 rounded-2xl flex flex-col hover:shadow-xl hover:border-gray-300 transition-all duration-300 group overflow-hidden">
                   
-                  <div className="w-full sm:w-32 h-32 bg-gray-50 rounded-lg p-2 flex items-center justify-center border border-gray-100 shrink-0 relative overflow-hidden">
+                  {/* Imagen de la Tarjeta */}
+                  <div className="w-full h-48 bg-gray-50 p-6 flex items-center justify-center border-b border-gray-100 relative overflow-hidden">
+                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-gray-900 text-[10px] font-black px-2 py-1 rounded shadow-sm uppercase tracking-wider z-10 border border-gray-200">
+                      {item.pieza?.categoria}
+                    </span>
                     {item.pieza?.imagen_url ? (
-                      <img src={item.pieza.imagen_url} className="max-h-full object-contain group-hover:scale-110 transition-transform" alt="pieza" />
+                      <img src={item.pieza.imagen_url} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={item.pieza?.nombre_comercial} />
                     ) : (
-                      <span className="text-xs text-gray-400">Sin foto</span>
+                      <span className="text-4xl font-black text-gray-200 opacity-50">{item.pieza?.nombre_comercial?.charAt(0)}</span>
                     )}
                   </div>
                   
-                  <div className="flex-1 text-center sm:text-left">
-                    <p className="text-[10px] text-autoblue font-black uppercase tracking-widest bg-blue-50 inline-block px-2 py-1 rounded mb-1">{item.pieza?.categoria}</p>
-                    <h4 className="text-lg font-black text-gray-900 leading-tight mb-1">{item.pieza?.nombre_comercial}</h4>
-                    <p className="text-xs text-gray-500 font-medium mb-1">Para: {item.pieza?.marca_vehiculo} {item.pieza?.modelo}</p>
-                    <p className="text-xs text-gray-400 font-bold">Marca: <span className="text-gray-600">{item.pieza?.marca}</span></p>
-                  </div>
-                  
-                  <div className="text-center sm:text-right shrink-0 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-0 border-gray-100">
-                    <p className="text-3xl font-black text-autored">${item.precio_oferta?.toFixed(2)}</p>
-                    <p className="text-[10px] font-bold text-green-600 mb-3 uppercase tracking-wider">{item.stock} disponibles</p>
-                    <button 
-                      onClick={() => navigate('/catalogo')} 
-                      className="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors"
-                    >
-                      Ver en Catálogo
-                    </button>
+                  {/* Info de la Tarjeta */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <div className="mb-auto">
+                      <p className="text-xs text-gray-400 font-bold mb-1 uppercase tracking-wider">{item.pieza?.marca}</p>
+                      <h4 className="text-lg font-black text-gray-900 leading-tight mb-2 line-clamp-2">{item.pieza?.nombre_comercial}</h4>
+                      <p className="text-xs text-gray-500 font-medium bg-gray-50 inline-block px-2 py-1 rounded border border-gray-100">
+                        Aplica para: <span className="font-bold text-gray-700">{item.pieza?.marca_vehiculo}</span>
+                      </p>
+                    </div>
+                    
+                    <div className="mt-6 flex items-end justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Precio Especial</p>
+                        <p className="text-2xl font-black text-autored">${item.precio_oferta?.toFixed(2)}</p>
+                      </div>
+                      <Link 
+                        to={`/producto/${item.id}`} 
+                        className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm"
+                      >
+                        Detalles
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))
@@ -153,38 +182,55 @@ export default function Home() {
         <div className="space-y-6">
           
           {/* TOP REFACCIONARIAS DINÁMICO */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider mb-5">Top Refaccionarias</h3>
-            <div className="space-y-1">
-              
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm sticky top-24">
+            <div className="flex items-center gap-2 mb-6">
+              <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">Top Sucursales</h3>
+            </div>
+            
+            <div className="space-y-2">
               {topTiendas.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-2">Buscando sucursales...</p>
+                <div className="animate-pulse space-y-3">
+                  <div className="h-10 bg-gray-100 rounded-lg"></div>
+                  <div className="h-10 bg-gray-100 rounded-lg"></div>
+                  <div className="h-10 bg-gray-100 rounded-lg"></div>
+                </div>
               ) : (
-                topTiendas.map(tienda => (
+                topTiendas.map((tienda, index) => (
                   <Link 
                     key={tienda.id} 
                     to={`/tienda/${tienda.id}`} 
-                    className="flex justify-between items-center hover:bg-gray-50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-gray-100"
+                    className="flex justify-between items-center hover:bg-gray-50 p-3 rounded-xl transition-all border border-transparent hover:border-gray-200 group"
                   >
-                    <span className="font-bold text-gray-800 text-sm truncate pr-2">{tienda.nombre}</span>
-                    <span className="bg-yellow-50 text-yellow-700 text-xs font-black px-2 py-1 rounded shrink-0">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className="text-xs font-black text-gray-300 group-hover:text-autoblue transition-colors w-4">{index + 1}</span>
+                      <span className="font-bold text-gray-800 text-sm truncate">{tienda.nombre}</span>
+                    </div>
+                    <span className="bg-yellow-50 text-yellow-700 text-xs font-black px-2 py-1 rounded shrink-0 flex items-center gap-1 border border-yellow-100">
                       ★ {tienda.calificacion}
                     </span>
                   </Link>
                 ))
               )}
-
             </div>
+            
+            <Link to="/directorio" className="block text-center text-xs font-bold text-autoblue hover:text-blue-900 mt-6 pt-4 border-t border-gray-100 uppercase tracking-wider">
+              Ver directorio completo
+            </Link>
           </div>
           
-          <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6 rounded-2xl text-center shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-100 rounded-bl-full opacity-50"></div>
-            <h3 className="text-autoblue font-black mb-2 text-lg relative z-10">¿Eres Distribuidor?</h3>
-            <p className="text-gray-500 text-sm mb-5 font-medium leading-relaxed relative z-10">Únete a nuestra red y multiplica tus ventas de mostrador conectando tu inventario.</p>
-            <Link to="/registro-negocio" className="block w-full bg-white hover:bg-autoblue border-2 border-autoblue text-autoblue hover:text-white py-2.5 rounded-xl text-sm font-black transition-all shadow-sm relative z-10">
-  Registrar Negocio
-</Link>
+          {/* Tarjeta de Registro de Negocio */}
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-900 p-8 rounded-2xl text-center shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-autored/20 rounded-tr-full pointer-events-none"></div>
+            
+            <h3 className="text-white font-black mb-3 text-xl relative z-10 leading-tight">¿Eres Distribuidor?</h3>
+            <p className="text-gray-300 text-sm mb-6 font-medium leading-relaxed relative z-10">Únete a nuestra red y multiplica tus ventas de mostrador hoy mismo.</p>
+            <Link to="/registro-negocio" className="block w-full bg-autored hover:bg-red-700 text-white py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
+              Registrar mi Tienda
+            </Link>
           </div>
+
         </div>
       </div>
     </div>

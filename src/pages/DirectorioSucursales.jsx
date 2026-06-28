@@ -1,15 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
-// Configuración del tamaño del mapa
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-  borderRadius: '0.75rem'
-};
+// 🔧 PARCHE VITE: Arreglo para los íconos de Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Centro por defecto (Ciudad de México)
-const centroPorDefecto = { lat: 19.4326, lng: -99.1332 };
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+// ---------------------------------------------------------
+
+const centroPorDefecto = [19.4326, -99.1332];
+
+function RecenterMap({ coordenadas, zoom }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coordenadas, zoom);
+  }, [coordenadas, zoom, map]);
+  return null;
+}
 
 export default function DirectorioSucursales() {
   const [sucursales, setSucursales] = useState([]);
@@ -20,11 +35,8 @@ export default function DirectorioSucursales() {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
   const [coordenadasMarcador, setCoordenadasMarcador] = useState(null);
 
-  // ⚠️ AQUÍ IRÁ TU API KEY DE GOOGLE CLOUD EN EL FUTURO
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: "TU_API_KEY_DE_GOOGLE_AQUI" // <--- Reemplazar luego
-  });
+  // 🔥 NUEVO ESTADO: Para controlar el texto de la alerta flotante
+  const [alertaMapa, setAlertaMapa] = useState('');
 
   useEffect(() => {
     const fetchSucursales = async () => {
@@ -32,7 +44,6 @@ export default function DirectorioSucursales() {
         const response = await fetch('http://localhost:8080/api/establecimientos/todos');
         if (response.ok) {
           const data = await response.json();
-          // Solo mostramos las tiendas que ya fueron APROBADAS por el Admin
           const activas = data.filter(tienda => tienda.estado === 'APROBADO');
           setSucursales(activas);
         }
@@ -45,27 +56,31 @@ export default function DirectorioSucursales() {
     fetchSucursales();
   }, []);
 
-  // FUNCIÓN MAGICA: Convierte la dirección de texto a Coordenadas en el mapa
-  const ubicarEnMapa = (tienda) => {
+  const ubicarEnMapa = async (tienda) => {
     setTiendaSeleccionada(tienda);
+    setAlertaMapa(''); // Limpiamos cualquier alerta previa
     
-    if (!window.google) return; // Si el mapa no ha cargado, salimos
-
-    const geocoder = new window.google.maps.Geocoder();
     const direccionCompleta = `${tienda.calle} ${tienda.numero}, ${tienda.colonia}, ${tienda.municipio}, ${tienda.estadoRep}, México`;
 
-    geocoder.geocode({ address: direccionCompleta }, (results, status) => {
-      if (status === 'OK' && results[0]) {
-        const lat = results[0].geometry.location.lat();
-        const lng = results[0].geometry.location.lng();
-        const nuevasCoordenadas = { lat, lng };
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccionCompleta)}`);
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        const nuevasCoordenadas = [lat, lng];
         
         setMapCenter(nuevasCoordenadas);
         setCoordenadasMarcador(nuevasCoordenadas);
       } else {
-        alert("No pudimos encontrar la ubicación exacta de esta sucursal en el mapa.");
+        // 🔥 Reemplazamos el alert nativo por nuestro estado
+        setAlertaMapa("📍 OpenStreetMap no pudo ubicar la dirección exacta. Mostrando el mapa general.");
       }
-    });
+    } catch (error) {
+      console.error("Error buscando coordenadas:", error);
+      setAlertaMapa("Hubo un problema al contactar al servidor de mapas. 🔧");
+    }
   };
 
   return (
@@ -113,41 +128,65 @@ export default function DirectorioSucursales() {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: GOOGLE MAPS */}
-          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative flex items-center justify-center overflow-hidden">
-            {!isLoaded ? (
-              <div className="text-gray-500 font-bold animate-pulse">Cargando motor de mapas...</div>
-            ) : (
-              <GoogleMap
-                mapContainerStyle={containerStyle}
-                center={mapCenter}
-                zoom={tiendaSeleccionada ? 16 : 5}
-                options={{
-                  disableDefaultUI: false,
-                  zoomControl: true,
-                  streetViewControl: false,
-                  mapTypeControl: false,
-                }}
-              >
-                {/* Dibujamos el Pin si hay coordenadas */}
-                {coordenadasMarcador && tiendaSeleccionada && (
-                  <Marker position={coordenadasMarcador}>
-                    <InfoWindow position={coordenadasMarcador}>
-                      <div className="p-1 max-w-[200px]">
-                        <h4 className="font-black text-gray-900 text-sm">{tiendaSeleccionada.nombre}</h4>
-                        <p className="text-xs text-gray-600 mt-1">{tiendaSeleccionada.calle} #{tiendaSeleccionada.numero}</p>
-                        <a href={`https://wa.me/${tiendaSeleccionada.telefono}`} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs bg-green-500 text-white font-bold px-2 py-1 rounded block text-center">
-                          Contactar WhatsApp
-                        </a>
-                      </div>
-                    </InfoWindow>
-                  </Marker>
-                )}
-              </GoogleMap>
+          {/* COLUMNA DERECHA: LEAFLET MAPS */}
+          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative flex items-center justify-center overflow-hidden z-0">
+            
+            {/* 🔥 ALERTA PERSONALIZADA FLOTANTE 🔥 */}
+            {alertaMapa && (
+              <div className="absolute top-4 left-4 right-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl shadow-xl z-[1000] flex items-center justify-between animate-fade-in text-xs font-bold">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                  <span>{alertaMapa}</span>
+                </div>
+                <button 
+                  onClick={() => setAlertaMapa('')} 
+                  className="text-red-400 hover:text-red-700 transition-colors p-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
             )}
 
-            {/* Aviso de API KEY (Solo para que sepas por qué sale gris al inicio) */}
-            {isLoaded && <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm text-[10px] font-bold text-gray-500 pointer-events-none">Motor: Google Maps API</div>}
+            <MapContainer 
+              center={mapCenter} 
+              zoom={5} 
+              style={{ width: '100%', height: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              
+              <RecenterMap coordenadas={mapCenter} zoom={tiendaSeleccionada ? 16 : 5} />
+
+              {coordenadasMarcador && tiendaSeleccionada && (
+                <Marker position={coordenadasMarcador}>
+                  <Popup>
+                    <div className="p-1 max-w-[200px] text-center">
+                      <h4 className="font-black text-gray-900 text-sm">{tiendaSeleccionada.nombre}</h4>
+                      <p className="text-xs text-gray-600 mt-1">{tiendaSeleccionada.calle} #{tiendaSeleccionada.numero}</p>
+                      <a 
+                        href={`https://wa.me/${tiendaSeleccionada.telefono}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="mt-2 text-xs bg-green-500 hover:bg-green-600 text-white font-bold px-2 py-1 rounded block transition-colors"
+                      >
+                        Contactar WhatsApp
+                      </a>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+            </MapContainer>
+
+            {/* Aviso de Motor */}
+            <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm text-[10px] font-bold text-gray-500 pointer-events-none z-[999]">
+              Motor: OpenStreetMap (Gratis)
+            </div>
           </div>
 
         </div>

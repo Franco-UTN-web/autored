@@ -130,7 +130,7 @@ export default function Navbar() {
               Inicio
             </Link>
 
-            <Link to="/nosotros" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
+            <Link to="/" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
               Nosotros
             </Link>
             
