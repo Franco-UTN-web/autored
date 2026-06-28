@@ -18,7 +18,7 @@ import DirectorioSucursales from './pages/DirectorioSucursales';
 
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/StoreDashboard';
-import AdminDashboard from './pages/dashboards/AdminDashboard';
+import AdminDashboard from './pages/dashboards/admin/AdminDashboard';
 
 function App() {
 
