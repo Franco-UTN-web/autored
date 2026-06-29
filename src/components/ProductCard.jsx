@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 
-export default function ProductCard({ item, miTiendaId, enComparacion, onToggleCompare }) {
+
+export default function ProductCard({ item, miTiendaId, enComparacion, onToggleCompare, rolUsuario }) {
   const navigate = useNavigate();
   const pieza = item.pieza;
   
@@ -95,24 +96,27 @@ export default function ProductCard({ item, miTiendaId, enComparacion, onToggleC
           </div>
         </div>
 
-        {/* BOTONES INTELIGENTES */}
+       {/* BOTONES INTELIGENTES */}
         <div className="mt-4 flex gap-2">
-          {/* El botón de ver detalle siempre funciona por si quieren leer la ficha técnica */}
+          {/* El botón de ver detalle siempre funciona */}
           <Link to={`/producto/${item.id}`} className="flex-1 text-center bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl text-sm border border-gray-200 transition-colors">
             Detalle
           </Link>
 
-          {esMiPieza ? (
-            <button onClick={() => navigate('/store')} className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1">
+          {/* LÓGICA DE ROLES EN CASCADA */}
+          {rolUsuario === 'admin' ? (
+            <Link to="/dashboard/admin" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
+              Auditar Pieza
+            </Link>
+          ) : esMiPieza ? (
+            <button onClick={() => navigate('/store-dashboard')} className="flex-1 bg-autoblue hover:bg-blue-900 text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
               Editar
             </button>
           ) : sinStock ? (
-            // NUEVO: Botón inactivo si no hay stock
             <button disabled className="flex-1 bg-gray-100 text-gray-400 font-bold py-2.5 rounded-xl text-sm border border-gray-200 cursor-not-allowed flex items-center justify-center gap-1 shadow-none">
-              Sin Existencia
+              Agotado
             </button>
           ) : (
-            // Botón normal de WhatsApp
             <a href={linkWhatsApp} target="_blank" rel="noopener noreferrer" className="flex-1 bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
               Contactar
             </a>

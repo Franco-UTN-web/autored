@@ -4,9 +4,19 @@ import { useNavigate, Link } from 'react-router-dom';
 export default function Home() {
   const [destacados, setDestacados] = useState([]);
   const [topTiendas, setTopTiendas] = useState([]); 
+  const [rolUsuario, setRolUsuario] = useState('invitado');
   const navigate = useNavigate();
 
   useEffect(() => {
+    try {
+      const datosUsuarioJson = localStorage.getItem('user_data');
+      if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
+        const usuarioLogueado = JSON.parse(datosUsuarioJson);
+        setRolUsuario(usuarioLogueado.user_metadata?.role || 'comprador');
+      }
+    } catch (e) {
+      console.warn("No hay sesión activa");
+    }
     const fetchDatos = async () => {
       try {
         const [resInventario, resEstablecimientos] = await Promise.all([
@@ -220,16 +230,30 @@ export default function Home() {
           </div>
           
           {/* Tarjeta de Registro de Negocio */}
-          <div className="bg-gray-900 p-6 rounded-2xl shadow-sm text-white text-center">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-autored/20 rounded-tr-full pointer-events-none"></div>
-            
-            <h3 className="text-white font-black mb-3 text-xl relative z-10 leading-tight">¿Eres Distribuidor?</h3>
-            <p className="text-gray-300 text-sm mb-6 font-medium leading-relaxed relative z-10">Únete a nuestra red y multiplica tus ventas de mostrador hoy mismo.</p>
-            <Link to="/registro-negocio" className="block w-full bg-autored hover:bg-red-700 text-white py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
-              Registrar mi Tienda
-            </Link>
-          </div>
+          {(rolUsuario === 'invitado' || rolUsuario === 'comprador') && (
+            <div className="bg-gray-900 p-6 rounded-2xl shadow-sm text-white text-center overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-autored/20 rounded-tr-full pointer-events-none"></div>
+              
+              <h3 className="text-white font-black mb-3 text-xl relative z-10 leading-tight">¿Eres Distribuidor?</h3>
+              <p className="text-gray-300 text-sm mb-6 font-medium leading-relaxed relative z-10">Únete a nuestra red y multiplica tus ventas de mostrador hoy mismo.</p>
+              <Link to="/registro-negocio" className="block w-full bg-autored hover:bg-red-700 text-white py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
+                Registrar mi Tienda
+              </Link>
+            </div>
+          )}
+
+          {(rolUsuario === 'admin' || rolUsuario === 'tienda') && (
+            <div className="bg-autoblue p-6 rounded-2xl shadow-sm text-white text-center overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full pointer-events-none"></div>
+              
+              <h3 className="text-white font-black mb-2 text-lg relative z-10">¡Hola de nuevo!</h3>
+              <p className="text-blue-100 text-sm mb-6 font-medium relative z-10">Tienes acceso a herramientas de gestión avanzadas.</p>
+              <Link to={rolUsuario === 'admin' ? '/dashboard/admin' : '/store-dashboard'} className="block w-full bg-white text-autoblue hover:bg-blue-50 py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
+                Ir a mi Panel de Control
+              </Link>
+            </div>
+          )}
 
         </div>
       </div>

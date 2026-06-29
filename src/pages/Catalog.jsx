@@ -16,6 +16,7 @@ const CATEGORIAS_RAPIDAS = [
 
 export default function Catalog() {
   let usuarioLogueado = null;
+  let rolUsuario = 'invitado';
   try {
     const datosUsuarioJson = localStorage.getItem('user_data');
     if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
@@ -269,6 +270,7 @@ const productosFiltrados = useMemo(() => {
                   miTiendaId={miTiendaId} 
                   enComparacion={listaComparacion.some(p => p.id === item.id)}
                   onToggleCompare={() => toggleComparacion(item)}
+                  rolUsuario={rolUsuario}
                 />
               ))}
             </div>
