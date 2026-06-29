@@ -15,34 +15,48 @@ export default function Login() {
   
   const navigate = useNavigate();
 
-const handleAuthSubmit = async (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setCargando(true);
     setErrorMsg('');
 
-    // --- VALIDACIONES FRONTEND ---
+    // ==========================================
+    // 🛡️ VALIDACIONES FRONTEND (Antes de ir a internet)
+    // ==========================================
+
+    // 🛡️ EXPLICACIÓN: Validación de formato de Correo (RegEx)
+    // Utiliza una "Expresión Regular". Verifica que el texto no tenga espacios ([^\s@]), 
+    // que contenga un arroba (@), seguido de más texto, un punto (\.), y el dominio (ej. com).
+    // Si no cumple este patrón exacto, frena la función (return) y no gasta recursos del servidor.
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setErrorMsg('Por favor, ingresa un correo electrónico válido.');
       setCargando(false);
-      return;
+      return; 
     }
 
-    // Expresión regular para: Min 6 caracteres, 1 Mayúscula, 1 Número y 1 Carácter Especial
+    // 🛡️ EXPLICACIÓN: Validación de Contraseña Segura (RegEx)
+    // Busca hacia adelante (?=) para asegurar que exista: al menos una mayúscula ([A-Z]), 
+    // al menos un dígito (\d), y un símbolo especial. El .{6,}$ final asegura que mida 6 o más caracteres.
+    // Previene el registro de contraseñas débiles como "123456".
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_.-]).{6,}$/;
     if (!passwordRegex.test(password)) {
       setErrorMsg('La contraseña debe tener al menos 6 caracteres, incluir una letra mayúscula, un número y un carácter especial (ej. @, #, $, %).');
       setCargando(false);
-      return;
+      return; 
     }
 
     try {
       if (activeTab === 'signup') {
+        
+        // 🛡️ EXPLICACIÓN: Validación de Nombre Completo
+        // .trim() limpia los espacios en blanco accidentales (o intencionales) al inicio y final.
+        // Asegura que queden al menos 3 caracteres reales antes de permitir el registro.
         if (fullName.trim().length < 3) {
           throw new Error('Por favor, ingresa tu Nombre Completo (mínimo 3 letras).');
         }
 
-        // 1. EXTRAEMOS 'data' Y 'error' (¡Aquí estaba el detalle!)
+        // 1. Intentamos crear el usuario en Supabase
         const { data, error } = await supabase.auth.signUp({
           email: email,
           password: password,
@@ -55,10 +69,16 @@ const handleAuthSubmit = async (e) => {
           }
         });
 
-        // 2. Intercepción de errores normales de red o contraseña
         if (error) throw error;
 
-        // 🔥 3. EL TRUCO: Detectar el correo duplicado leyendo 'data' 🔥
+        // ==========================================
+        // 🛡️ VALIDACIONES BACKEND (Supabase)
+        // ==========================================
+
+        // 🛡️ EXPLICACIÓN: Detección de Correos Duplicados
+        // Supabase NO devuelve error si el correo ya existe (medida anti-hackers para no revelar correos).
+        // En su lugar, finge éxito pero devuelve el arreglo 'identities' vacío (length === 0).
+        // Interceptamos esa trampa aquí para avisarle amablemente al usuario real.
         if (data?.user?.identities != null && data.user.identities.length === 0) {
           throw new Error('Este correo ya está registrado en AutoRed. Por favor, cambia a "Iniciar Sesión" o recupera tu contraseña.');
         }
@@ -70,48 +90,44 @@ const handleAuthSubmit = async (e) => {
         setPassword('');
         setFullName('');
 
-      } else {
-        // 1. Inicio de sesión normal
+     } else {
+        // 1. Supabase verifica la contraseña
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
           password: password,
         });
 
-        if (error) {
-          throw new Error('Credenciales incorrectas o correo sin verificar.');
-        }
+        if (error) throw new Error('Credenciales incorrectas o correo sin verificar.');
 
+        // 2. 🛡️ PREGUNTAMOS A SPRING BOOT LA VERDAD ABSOLUTA
+        const syncResponse = await fetch('http://localhost:8080/api/login/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: data.user.id,
+            email: data.user.email,
+            nombre: data.user.user_metadata?.nombre || 'Usuario'
+          })
+        });
 
-        // Consultamos tu tabla 'perfiles' pública para traer el rol más actualizado
-        try {
-          const { data: perfilData, error: perfilError } = await supabase
-            .from('perfiles')
-            .select('rol, nombre')
-            .eq('id', data.user.id)
-            .single();
-          
-          if (perfilData && !perfilError) {
-            // Sobrescribimos los metadatos del usuario con la verdad de la tabla
-            data.user.user_metadata = {
-              ...data.user.user_metadata,
-              role: perfilData.rol || 'comprador',
-              nombre: perfilData.nombre || data.user.user_metadata?.nombre
-            };
-            console.log("Rol actualizado desde la tabla perfiles:", perfilData.rol);
-          }
-        } catch (err) {
-          console.warn("No se pudo cruzar la info con la tabla perfiles", err);
-        }
+        if (!syncResponse.ok) throw new Error('Error al sincronizar con el servidor central.');
+        
+        const syncData = await syncResponse.json();
 
-        // 2. Guardamos la sesión modificada en memoria
+        // 3. Forzamos el rol que dijo Java, ignorando el de Supabase
+        data.user.user_metadata = {
+          ...data.user.user_metadata,
+          role: syncData.rol, // <--- LA FUENTE DE LA VERDAD
+          nombre: syncData.nombre
+        };
+
+        // 4. Guardamos la sesión
         localStorage.setItem('session_token', data.session.access_token);
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
-        const userRole = data.user?.user_metadata?.role || 'comprador';
-
-        // 3. Redirección inteligente
-        if (userRole === 'tienda') navigate('/store-dashboard');
-        else if (userRole === 'admin') navigate('/dashboard/admin');
+        // 5. Redirección basada en el rol real
+        if (syncData.rol === 'tienda') navigate('/store-dashboard');
+        else if (syncData.rol === 'admin') navigate('/dashboard/admin');
         else navigate('/dashboard/cliente');
       }
       
@@ -123,6 +139,10 @@ const handleAuthSubmit = async (e) => {
   };
 
   const handlePasswordRecovery = async () => {
+    
+    // 🛡️ EXPLICACIÓN: Pre-validación de Recuperación
+    // Verifica que el input no esté vacío y tenga formato de correo ANTES de contactar a Supabase.
+    // Esto evita gastar cuota de correos de recuperación (que cuestan dinero en producción) con peticiones basura.
     if (!email) {
       setErrorMsg('Por favor, ingresa tu correo electrónico arriba para enviar el enlace de recuperación.');
       return;

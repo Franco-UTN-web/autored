@@ -103,10 +103,12 @@ export default function Catalog() {
   };
 
   // --- FILTROS INTELIGENTES ---
-  const productosFiltrados = useMemo(() => {
+const productosFiltrados = useMemo(() => {
     let filtrados = productos.filter(item => {
       const pieza = item.pieza;
-      if (!pieza) return false;
+      
+      // 🛡️ FILTRO DE BAJA LÓGICA: Si la pieza no existe o el Admin la desactivó, la ocultamos del catálogo
+      if (!pieza || pieza.activo === false) return false;
 
       const vehiculoActivo = misVehiculos.find(v => v.id === filtroMiVehiculo);
       const pasaMiVehiculo = !vehiculoActivo || 

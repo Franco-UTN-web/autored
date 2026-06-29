@@ -9,6 +9,44 @@ export default function StoreManagement({
   // Unimos activas y suspendidas para mostrarlas en el directorio
   const directorioCompleto = [...tiendasActivas, ...tiendasSuspendidas];
 
+ const exportarCSV = () => {
+    // 1. Cabeceras expandidas
+    const cabeceras = ["ID,Nombre,RFC,Telefono,Estado,Calle,Numero,Colonia,CP,Ciudad,Estado_Rep,Propietario_ID"];
+    
+    // 2. Mapeo con más detalle
+    const filas = directorioCompleto.map(tienda => {
+      // Limpiamos los textos por si contienen comas que rompan el formato CSV
+      const limpiar = (str) => (str ? `"${str.toString().replace(/"/g, '""')}"` : '""');
+      
+      return [
+        tienda.id,
+        limpiar(tienda.nombre),
+        limpiar(tienda.rfc),
+        limpiar(tienda.telefono),
+        tienda.estado,
+        limpiar(tienda.calle),
+        limpiar(tienda.numero),
+        limpiar(tienda.colonia),
+        limpiar(tienda.codigoPostal),
+        limpiar(tienda.ciudad),
+        limpiar(tienda.estadoRep),
+        tienda.propietario_id || 'N/A'
+      ].join(",");
+    });
+
+    const contenidoCSV = cabeceras.concat(filas).join("\n");
+
+    // 3. Descarga (usando codificación UTF-8 para que las tildes y ñ se vean bien en Excel)
+    const blob = new Blob(["\uFEFF", contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `reporte_detallado_autored_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="py-10 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -19,6 +57,14 @@ export default function StoreManagement({
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Panel de Control Global</h1>
             <p className="text-gray-500 font-medium mt-1">Auditoría y supervisión de AutoRed</p>
           </div>
+
+          <button 
+            onClick={exportarCSV}
+            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Exportar CSV
+          </button>
         </div>
 
         {/* KPIs */}
