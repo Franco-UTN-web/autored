@@ -109,7 +109,7 @@ export default function ProductCard({ item, miTiendaId, enComparacion, onToggleC
               Auditar Pieza
             </Link>
           ) : esMiPieza ? (
-            <button onClick={() => navigate('/store-dashboard')} className="flex-1 bg-autoblue hover:bg-blue-900 text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
+            <button onClick={() => navigate('/dashboard/store')} className="flex-1 bg-autoblue hover:bg-blue-900 text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
               Editar
             </button>
           ) : sinStock ? (

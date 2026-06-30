@@ -17,7 +17,7 @@ import DirectorioSucursales from './pages/DirectorioSucursales';
 
 
 import CustomerDashboard from './pages/dashboards/CustomerDashboard';
-import StoreDashboard from './pages/dashboards/StoreDashboard';
+import StoreDashboard from './pages/dashboards/store/StoreDashboard';
 import AdminDashboard from './pages/dashboards/admin/AdminDashboard';
 
 function App() {
@@ -92,7 +92,7 @@ function App() {
               </ProtectedRoute>
             } />
             
-            <Route path="/store-dashboard" element={
+            <Route path="/dashboard/store" element={
               <ProtectedRoute allowedRoles={['tienda']}>
                 <StoreDashboard />
               </ProtectedRoute>

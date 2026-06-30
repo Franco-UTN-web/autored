@@ -126,7 +126,7 @@ export default function Login() {
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
         // 5. Redirección basada en el rol real
-        if (syncData.rol === 'tienda') navigate('/store-dashboard');
+        if (syncData.rol === 'tienda') navigate('/dashboard/store');
         else if (syncData.rol === 'admin') navigate('/dashboard/admin');
         else navigate('/dashboard/cliente');
       }

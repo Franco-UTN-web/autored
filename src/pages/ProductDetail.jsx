@@ -226,6 +226,19 @@ export default function ProductDetail() {
                 <span className="text-4xl font-black text-autored">${precio_oferta?.toFixed(2)} <span className="text-lg text-gray-500 font-medium">MXN</span></span>
               </div>
 
+              {/* DESCRIPCIÓN DEL VENDEDOR */}
+              {pieza.descripcion && (
+                <div className="mb-8 bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+                  <h3 className="font-black text-autoblue mb-3 flex items-center gap-2 uppercase tracking-wider text-xs">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Notas del Vendedor
+                  </h3>
+                  <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                    {pieza.descripcion}
+                  </p>
+                </div>
+              )}
+
               {/* Ficha Técnica */}
               <div className="space-y-4 mb-8 bg-gray-50 p-6 rounded-xl border border-gray-100 flex-1">
                 <h3 className="font-black text-gray-900 mb-4 border-b border-gray-200 pb-2 uppercase tracking-wider text-sm">Ficha Técnica</h3>

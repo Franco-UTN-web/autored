@@ -249,7 +249,7 @@ export default function Home() {
               
               <h3 className="text-white font-black mb-2 text-lg relative z-10">¡Hola de nuevo!</h3>
               <p className="text-blue-100 text-sm mb-6 font-medium relative z-10">Tienes acceso a herramientas de gestión avanzadas.</p>
-              <Link to={rolUsuario === 'admin' ? '/dashboard/admin' : '/store-dashboard'} className="block w-full bg-white text-autoblue hover:bg-blue-50 py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
+              <Link to={rolUsuario === 'admin' ? '/dashboard/admin' : '/dashboard/store'} className="block w-full bg-white text-autoblue hover:bg-blue-50 py-3.5 rounded-xl text-sm font-black transition-all shadow-md relative z-10">
                 Ir a mi Panel de Control
               </Link>
             </div>
