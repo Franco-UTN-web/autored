@@ -17,7 +17,7 @@ export default function RegistroNegocio() {
   const [mensajeError, setMensajeError] = useState('');
   const [campoActivo, setCampoActivo] = useState('');
 
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o';
+ 
 
   useEffect(() => {
     const datosUsuarioJson = localStorage.getItem('user_data');
@@ -28,25 +28,22 @@ export default function RegistroNegocio() {
     }
   }, [navigate]);
 
-  const subirDocumentoASupabase = async (file, tipo) => {
+ const subirDocumentoASupabase = async (file, tipo) => {
     if (!file) return null;
-    const sessionToken = localStorage.getItem('session_token');
-    const extension = file.name.split('.').pop();
-    const nombreUnico = `${usuario.id}-${tipo}-${Date.now()}.${extension}`;
-    const urlUpload = `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/documentos_negocio/${nombreUnico}`;
     
-    const response = await fetch(urlUpload, {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Hablamos con nuestro Java y le decimos que va a la carpeta 'documentos_negocio'
+    const response = await fetch('http://localhost:8080/api/archivos/subir?carpeta=documentos_negocio', {
       method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${sessionToken}`, 
-        'apikey': SUPABASE_ANON_KEY,
-        'Content-Type': file.type 
-      },
-      body: file
+      body: formData 
     });
 
-    if (!response.ok) throw new Error(`Error al subir el documento ${tipo}`);
-    return `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/public/documentos_negocio/${nombreUnico}`;
+    if (!response.ok) throw new Error(`Error del servidor al subir el documento ${tipo}`);
+    
+    const data = await response.json();
+    return data.url; 
   };
 
   const validarFormulario = () => {

@@ -13,8 +13,6 @@ const vehiculosDb = {
 const aniosDisponibles = ["Todos los años", ...Array.from(new Array(37), (val, index) => (new Date().getFullYear() + 1) - index).map(String)];
 const marcasRefacciones = ["Bosch", "Brembo", "Gates", "LUK", "Valeo", "ACDelco", "Castrol", "KYB", "NGK", "Genérica"];
 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkaG50cXNhYndjYnVsbmFwZmNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MjYyNDYsImV4cCI6MjA5NTUwMjI0Nn0.8YqiYDidhvZc-n0VInSPy0XxvqYFgWz5fEijnDh6K_o'; 
-
 export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, onSuccess, mostrarNotificacion }) {
   const [cargando, setCargando] = useState(false);
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
@@ -54,17 +52,23 @@ export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, o
     });
   };
 
-  const subirImagenASupabase = async (file) => {
-    const extension = file.name.split('.').pop();
-    const nombreUnico = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${extension}`;
-    const urlUpload = `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/refaccionarias/${nombreUnico}`;
-    const response = await fetch(urlUpload, {
+ const subirImagenASupabase = async (file) => {
+    // Usamos FormData porque estamos enviando un archivo físico
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Hablamos con NUESTRO servidor local en lugar de Supabase directo
+    const response = await fetch('http://localhost:8080/api/archivos/subir', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': file.type },
-      body: file
+      body: formData // No le ponemos Content-Type, el navegador lo calcula solo al ver un FormData
     });
-    if (!response.ok) throw new Error("Rechazado por Supabase Storage");
-    return `https://rdhntqsabwcbulnapfcg.supabase.co/storage/v1/object/public/refaccionarias/${nombreUnico}`;
+
+    if (!response.ok) {
+      throw new Error("El servidor no pudo procesar la imagen.");
+    }
+    
+    const data = await response.json();
+    return data.url; // Esto ya contiene la URL pública directa
   };
 
   const handleSubmit = async (e) => {
