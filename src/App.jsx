@@ -45,7 +45,6 @@ function App() {
       })
       .then(res => res.json())
       .then(user => {
-        // ✨ EL ARREGLO ESTÁ AQUÍ ✨
         // Si el usuario viene de Google y no tiene rol, le ponemos 'comprador' por defecto
         if (!user.user_metadata) {
           user.user_metadata = {};

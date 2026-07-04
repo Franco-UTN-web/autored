@@ -1,20 +1,45 @@
 import { useState, useRef, useEffect } from 'react';
-import { supabase } from '../supabase';
+import { useNavigate } from 'react-router-dom';
 
 export default function ChatWindow() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { text: "¡Hola! Soy tu asistente inteligente en AutoRed 🚗. ¿Buscas alguna refacción en especial o necesitas ayuda para navegar?", isBot: true }
+    { text: "¡Hola! Soy tu copiloto en AutoRed 🚗. ¿En qué te ayudo?", isBot: true }
   ]);
   const [inputMsg, setInputMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  // 1. NUEVO ESTADO PARA SABER SI HAY SESIÓN
+  const [estaAutenticado, setEstaAutenticado] = useState(false);
+  
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate(); 
 
-  // Auto-scroll para que siempre se vea el último mensaje
+  // 2. VERIFICAMOS SI HAY ALGUIEN LOGUEADO CUANDO CARGA LA PÁGINA
+  useEffect(() => {
+    try {
+      const datos = localStorage.getItem('user_data');
+      if (datos && datos !== "undefined") {
+        setEstaAutenticado(true);
+      }
+    } catch (e) {
+      console.warn("Error al leer la sesión");
+    }
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const obtenerRolActual = () => {
+    try {
+      const datos = localStorage.getItem('user_data');
+      if (datos && datos !== "undefined") {
+        return JSON.parse(datos).user_metadata?.role || "comprador";
+      }
+    } catch (e) { return "invitado"; }
+    return "invitado";
+  };
 
  const handleSend = async (e) => {
     e.preventDefault();
@@ -26,80 +51,46 @@ export default function ChatWindow() {
     setIsLoading(true);
 
     try {
-      // 🛡️ 1. INTENTO DE BASE DE DATOS BLINDADO 🛡️
-      let contextoDB = "No tenemos esta pieza en el catálogo actualmente.";
+      const rolUsuario = obtenerRolActual();
       
-      try {
-        // A. Limpiamos el texto de signos de puntuación y lo pasamos a minúsculas
-        const textoLimpio = userText.toLowerCase().replace(/[.,¿?¡!]/g, '');
-        
-        // B. Lista de palabras basura que NO queremos buscar
-        const palabrasIgnorar = ['hola', 'oye', 'quiero', 'busco', 'necesito', 'puedes', 'hablar', 'del', 'sobre', 'las', 'los', 'para', 'una', 'uno', 'tiene', 'tienen', 'info', 'informacion'];
-        
-        // C. Filtramos para quedarnos solo con lo importante
-        const palabrasClave = textoLimpio.split(' ').filter(p => p.length > 2 && !palabrasIgnorar.includes(p));
-        
-        let consulta = supabase.from('piezas').select('nombre_comercial, marca, modelo, categoria');
-        
-        // Si sobrevivió alguna palabra clave (ej. "filtro"), buscamos con esa
-        if (palabrasClave.length > 0) {
-           consulta = consulta.ilike('nombre_comercial', `%${palabrasClave[0]}%`);
-        }
-        
-        const { data: piezasDB, error: dbError } = await consulta.limit(5);
-        
-        if (dbError) {
-          console.warn("⚠️ Advertencia de Supabase:", dbError.message);
-        } else if (piezasDB && piezasDB.length > 0) {
-          contextoDB = JSON.stringify(piezasDB);
-        }
-      } catch (dbCrash) {
-        console.warn("⚠️ Crash al conectar con Supabase:", dbCrash.message);
-      }
-
-      // 🤖 2. LLAMADA A GEMINI 🤖
-      const API_KEY = 'AQ.Ab8RN6JSshRwX3nrf6sJk8MT1pMoI3EEUWpD_zua43RXUWzTxA'; 
-      
-      const promptDelSistema = `Eres el asistente virtual oficial de AutoRed, una plataforma de refacciones automotrices.
-      
-      REGLAS ESTRICTAS:
-      1. SOLO puedes hablar sobre refacciones, mecánica, autos y la plataforma AutoRed. 
-      2. Saluda cordialmente si el usuario dice "hola" o te saluda.
-      3. NUNCA inventes precios, marcas o existencias. 
-      4. Basa tu respuesta sobre inventario ÚNICAMENTE en la siguiente información de nuestra BD:
-      
-      [DATOS REALES DE AUTORED]: 
-      ${contextoDB}
-      
-      Pregunta del cliente: ${userText}`;
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-
-      const response = await fetch(url, {
+      const response = await fetch('http://localhost:8080/api/chat/mensaje', {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptDelSistema }] }]
+        body: JSON.stringify({ 
+          mensaje: userText,
+          rol: rolUsuario 
         })
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error.message);
+      if (!response.ok) throw new Error("Error en el servidor");
       
-      const botReply = data.candidates[0].content.parts[0].text;
-      setMessages(prev => [...prev, { text: botReply, isBot: true }]);
+      const data = await response.json();
+      const respuestaIA = JSON.parse(data.rawJson);
+
+      setMessages(prev => [...prev, { text: respuestaIA.mensaje, isBot: true }]);
+
+      if (respuestaIA.accion === 'NAVIGATE_CATALOG') {
+        setTimeout(() => { navigate('/catalogo'); }, 1500); 
+      } else if (respuestaIA.accion === 'NAVIGATE_HOME') {
+        setTimeout(() => { navigate('/inicio'); }, 1500);
+      }
       
     } catch (error) {
-      console.error("🔴 Error Crítico con Gemini:", error);
-      setMessages(prev => [...prev, { text: "Ups, mis engranes fallaron un poco al responder. Intenta de nuevo. 🔧", isBot: true }]);
+      console.error("🔴 Error Crítico:", error);
+      setMessages(prev => [...prev, { text: "Hubo un corto circuito. Intenta de nuevo. 🔧", isBot: true }]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 3. 🪄 EL TRUCO MÁGICO: Si no está logueado, React devuelve "null" (No dibuja nada en pantalla)
+  if (!estaAutenticado) {
+    return null; 
+  }
+
+  // 4. Si SÍ está logueado, dibuja el botón y la ventana normal
   return (
     <>
-      {/* BOTÓN FLOTANTE */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 bg-autoblue hover:bg-blue-900 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 z-[100] flex items-center justify-center"
@@ -111,24 +102,21 @@ export default function ChatWindow() {
         )}
       </button>
 
-      {/* VENTANA DEL CHAT */}
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] flex flex-col overflow-hidden animate-fade-in" style={{ height: '500px', maxHeight: '80vh' }}>
           
-          {/* Cabecera */}
           <div className="bg-autoblue p-4 text-white flex items-center gap-3">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1">
               <img src="/logo.jpeg" alt="AutoRed Bot" className="w-full h-full object-contain rounded-full" />
             </div>
             <div>
-              <h3 className="font-black text-sm">Asistente AutoRed</h3>
+              <h3 className="font-black text-sm">Copiloto AutoRed</h3>
               <p className="text-[10px] text-blue-200 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> En línea y listo
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Seguro • Privado
               </p>
             </div>
           </div>
 
-          {/* Área de mensajes */}
           <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3 scroll-smooth">
             {messages.map((msg, idx) => (
               <div key={idx} className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.isBot ? 'bg-white border border-gray-200 text-gray-800 self-start rounded-tl-sm shadow-sm' : 'bg-autoblue text-white self-end rounded-tr-sm shadow-sm'}`}>
@@ -143,7 +131,6 @@ export default function ChatWindow() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input de texto */}
           <form onSubmit={handleSend} className="p-3 bg-white border-t border-gray-100 flex gap-2">
             <input 
               type="text" 
@@ -156,7 +143,6 @@ export default function ChatWindow() {
               <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
           </form>
-
         </div>
       )}
     </>
