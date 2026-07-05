@@ -16,7 +16,7 @@ import RegistroNegocio from './pages/RegistroNegocio';
 import DirectorioSucursales from './pages/DirectorioSucursales';
 
 
-import CustomerDashboard from './pages/dashboards/CustomerDashboard';
+import CustomerDashboard from './pages/dashboards/customer/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/store/StoreDashboard';
 import AdminDashboard from './pages/dashboards/admin/AdminDashboard';
 
@@ -85,7 +85,7 @@ function App() {
             <Route path="/directorio" element={<DirectorioSucursales />} />
             
             
-            <Route path="/dashboard/cliente" element={
+            <Route path="/dashboard/customer" element={
               <ProtectedRoute allowedRoles={['comprador']}>
                 <CustomerDashboard />
               </ProtectedRoute>

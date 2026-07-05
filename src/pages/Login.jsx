@@ -128,7 +128,7 @@ export default function Login() {
         // 5. Redirección basada en el rol real
         if (syncData.rol === 'tienda') navigate('/dashboard/store');
         else if (syncData.rol === 'admin') navigate('/dashboard/admin');
-        else navigate('/dashboard/cliente');
+        else navigate('/dashboard/customer');
       }
       
     } catch (error) {

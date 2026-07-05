@@ -27,7 +27,7 @@ export default function Navbar() {
     } else if (rol === 'admin') {
       navigate('/dashboard/admin');
     } else if (rol === 'comprador') {
-      navigate('/dashboard/cliente'); 
+      navigate('/dashboard/customer'); 
     } else {
       navigate('/login'); 
     }
