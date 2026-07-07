@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function UserManagement() {
   const [compradores, setCompradores] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(''); // NUEVO ESTADO PARA BUSCADOR
 
   useEffect(() => {
     cargarUsuarios();
@@ -22,7 +23,6 @@ export default function UserManagement() {
     }
   };
 
-  // NUEVA FUNCIÓN PARA SUSPENDER / REACTIVAR
   const alternarEstadoUsuario = async (id) => {
     try {
       const response = await fetch(`http://localhost:8080/api/admin/compradores/${id}/suspender`, {
@@ -30,7 +30,6 @@ export default function UserManagement() {
       });
       
       if (response.ok) {
-        // Actualizamos la tabla localmente sin tener que recargar toda la página
         setCompradores(prev => 
           prev.map(usuario => 
             usuario.id === id ? { ...usuario, activo: !usuario.activo } : usuario
@@ -66,6 +65,15 @@ export default function UserManagement() {
     document.body.removeChild(enlace);
   };
 
+  // FILTRADO EN TIEMPO REAL
+  const compradoresFiltrados = compradores.filter(usuario => {
+    const s = searchTerm.toLowerCase();
+    return (
+      (usuario.nombre && usuario.nombre.toLowerCase().includes(s)) ||
+      (usuario.id && usuario.id.toString().toLowerCase().includes(s))
+    );
+  });
+
   if (cargando) return <div className="p-10 text-center text-gray-500 font-medium animate-pulse">Cargando base de datos de clientes...</div>;
 
   return (
@@ -73,18 +81,31 @@ export default function UserManagement() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ENCABEZADO */}
-        <div className="mb-8 border-b border-gray-200 pb-4 flex justify-between items-end">
+        <div className="mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Gestión de Clientes</h1>
             <p className="text-gray-500 font-medium mt-1">Moderación de usuarios de la comunidad AutoRed.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            
+            {/* BUSCADOR */}
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Buscar por ID o Nombre..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              />
+              <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
             <button onClick={exportarCSV} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
               Exportar CSV
             </button>
             <div className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center gap-2">
-              Total: {compradores.length}
+              Total: {compradoresFiltrados.length}
             </div>
           </div>
         </div>
@@ -102,12 +123,12 @@ export default function UserManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {compradores.length === 0 ? (
+                {compradoresFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="py-12 text-center text-gray-400 font-medium">No hay clientes registrados.</td>
+                    <td colSpan="4" className="py-12 text-center text-gray-400 font-medium">No se encontraron clientes.</td>
                   </tr>
                 ) : (
-                  compradores.map((usuario) => {
+                  compradoresFiltrados.map((usuario) => {
                     const estaSuspendido = usuario.activo === false;
                     
                     return (

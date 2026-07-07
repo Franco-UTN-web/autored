@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Car, ShoppingBag, LogOut, Settings, Wrench } from 'lucide-react';
 import CustomerGarage from './views/CustomerGarage';
 import CustomerOrders from './views/CustomerOrders';
+import MiPerfil from './views/MiPerfil';
 
 export default function CustomerDashboard() {
   const [vistaActiva, setVistaActiva] = useState('garaje');
@@ -63,6 +64,14 @@ export default function CustomerDashboard() {
             >
               <ShoppingBag size={18} /> Mis Pedidos
             </button>
+            <button
+              onClick={() => setVistaActiva('perfil')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                vistaActiva === 'perfil' ? 'bg-autoblue text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              <Settings size={18} /> Mi Perfil
+            </button>
             <Link
               to="/catalogo"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-autoblue hover:bg-blue-50 transition-all mt-4 border border-blue-100"
@@ -87,6 +96,7 @@ export default function CustomerDashboard() {
         {/* Aquí renderizamos las vistas separadas */}
        {vistaActiva === 'garaje' && <CustomerGarage usuario={usuario} />}
         {vistaActiva === 'pedidos' && <CustomerOrders usuario={usuario} />}
+        {vistaActiva === 'perfil' && <MiPerfil />}
       </main>
     </div>
   );

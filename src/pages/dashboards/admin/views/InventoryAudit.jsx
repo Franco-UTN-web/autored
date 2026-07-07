@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function InventoryAudit() {
   const [piezas, setPiezas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(''); // NUEVO ESTADO PARA BUSCADOR
   
   // ESTADOS PARA EL MODAL CUSTOM
   const [modalVisible, setModalVisible] = useState(false);
@@ -27,13 +28,11 @@ export default function InventoryAudit() {
     }
   };
 
-  // 1. Abre el modal en lugar de la alerta del navegador
   const confirmarEliminacion = (pieza) => {
     setPiezaAEliminar(pieza);
     setModalVisible(true);
   };
 
-  // 2. Ejecuta la petición al backend cuando le dan "Sí, eliminar"
   const ejecutarEliminacion = async () => {
     if (!piezaAEliminar) return;
     
@@ -45,9 +44,8 @@ export default function InventoryAudit() {
       });
       
       if (response.ok) {
-        // Quitamos la pieza de la tabla
         setPiezas(prev => prev.filter(p => p.id !== piezaAEliminar.id));
-        setModalVisible(false); // Cerramos modal
+        setModalVisible(false);
       } else {
         alert("Hubo un error al intentar eliminar la pieza.");
       }
@@ -59,6 +57,18 @@ export default function InventoryAudit() {
     }
   };
 
+  // FILTRADO EN TIEMPO REAL
+  const piezasFiltradas = piezas.filter(pieza => {
+    const s = searchTerm.toLowerCase();
+    return (
+      (pieza.nombre_comercial && pieza.nombre_comercial.toLowerCase().includes(s)) ||
+      (pieza.numero_parte && pieza.numero_parte.toLowerCase().includes(s)) ||
+      (pieza.id && pieza.id.toString().toLowerCase().includes(s)) ||
+      (pieza.marca_vehiculo && pieza.marca_vehiculo.toLowerCase().includes(s)) ||
+      (pieza.modelo && pieza.modelo.toLowerCase().includes(s))
+    );
+  });
+
   if (cargando) return <div className="p-10 text-center text-gray-500 font-medium">Cargando catálogo global...</div>;
 
   return (
@@ -66,13 +76,28 @@ export default function InventoryAudit() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* ENCABEZADO */}
-        <div className="mb-8 border-b border-gray-200 pb-4 flex justify-between items-end">
+        <div className="mb-8 border-b border-gray-200 pb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Auditoría de Inventario</h1>
             <p className="text-gray-500 font-medium mt-1">Moderación global del catálogo de productos de AutoRed.</p>
           </div>
-          <div className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
-            Total Publicado: {piezas.length}
+          <div className="flex flex-wrap items-center gap-3">
+            
+            {/* BUSCADOR */}
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Buscar número, nombre, marca..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              />
+              <svg className="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+
+            <div className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
+              Mostrando: {piezasFiltradas.length}
+            </div>
           </div>
         </div>
 
@@ -89,14 +114,14 @@ export default function InventoryAudit() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {piezas.length === 0 ? (
+                {piezasFiltradas.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="py-12 text-center text-gray-400 font-medium">
-                      El catálogo global está vacío o limpio.
+                      No se encontraron piezas con tu búsqueda.
                     </td>
                   </tr>
                 ) : (
-                  piezas.map((pieza) => (
+                  piezasFiltradas.map((pieza) => (
                     <tr key={pieza.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-6">
                         <span className="font-mono text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200">
@@ -104,7 +129,6 @@ export default function InventoryAudit() {
                         </span>
                       </td>
                       <td className="py-4 px-6 flex items-center gap-3">
-                        {/* Si tienes imágenes de las piezas, esto las mostrará redonditas */}
                         {pieza.imagen_url ? (
                            <img src={pieza.imagen_url} alt="Pieza" className="w-10 h-10 rounded-md object-cover border border-gray-200" />
                         ) : (
@@ -115,7 +139,6 @@ export default function InventoryAudit() {
                         <div className="flex flex-col gap-1">
                           <p className="font-bold text-gray-900 text-base">{pieza.nombre_comercial || 'Sin nombre comercial'}</p>
                           
-                          {/* DISEÑO MEJORADO PARA LA DESCRIPCIÓN */}
                           {pieza.descripcion ? (
                             <div className="bg-blue-50 border border-blue-100 p-2 rounded-md mt-1">
                               <p className="text-xs text-gray-600 font-medium whitespace-pre-wrap leading-relaxed">

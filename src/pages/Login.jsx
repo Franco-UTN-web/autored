@@ -20,10 +20,6 @@ export default function Login() {
     setCargando(true);
     setErrorMsg('');
 
-    // ==========================================
-    // 🛡️ VALIDACIONES FRONTEND (Antes de ir a internet)
-    // ==========================================
-
     // 🛡️ EXPLICACIÓN: Validación de formato de Correo (RegEx)
     // Utiliza una "Expresión Regular". Verifica que el texto no tenga espacios ([^\s@]), 
     // que contenga un arroba (@), seguido de más texto, un punto (\.), y el dominio (ej. com).
@@ -113,6 +109,11 @@ export default function Login() {
         if (!syncResponse.ok) throw new Error('Error al sincronizar con el servidor central.');
         
         const syncData = await syncResponse.json();
+        
+        if (syncData.activo === 'false' || syncData.activo === false) {
+          await supabase.auth.signOut(); // Destruimos la sesión que Supabase le acababa de dar
+          throw new Error('Acceso denegado: Tu cuenta ha sido suspendida por un administrador.');
+        }
 
         // 3. Forzamos el rol que dijo Java, ignorando el de Supabase
         data.user.user_metadata = {

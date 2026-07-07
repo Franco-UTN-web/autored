@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // 1. IMPORTAMOS useLocation
 
 export default function ChatWindow() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,23 +9,26 @@ export default function ChatWindow() {
   const [inputMsg, setInputMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // 1. NUEVO ESTADO PARA SABER SI HAY SESIÓN
   const [estaAutenticado, setEstaAutenticado] = useState(false);
   
   const messagesEndRef = useRef(null);
   const navigate = useNavigate(); 
+  const location = useLocation(); // 2. OBTENEMOS LA RUTA ACTUAL
 
-  // 2. VERIFICAMOS SI HAY ALGUIEN LOGUEADO CUANDO CARGA LA PÁGINA
+  // 3. SE EJECUTA CADA VEZ QUE CAMBIAS DE PÁGINA (por el location.pathname)
   useEffect(() => {
     try {
       const datos = localStorage.getItem('user_data');
       if (datos && datos !== "undefined") {
         setEstaAutenticado(true);
+      } else {
+        setEstaAutenticado(false); // Oculta el bot si cierras sesión
+        setIsOpen(false);
       }
     } catch (e) {
       console.warn("Error al leer la sesión");
     }
-  }, []);
+  }, [location.pathname]); // <--- AQUÍ ESTÁ LA MAGIA
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,14 +68,48 @@ export default function ChatWindow() {
       if (!response.ok) throw new Error("Error en el servidor");
       
       const data = await response.json();
-      const respuestaIA = JSON.parse(data.rawJson);
+      
+      let respuestaIA;
+      try {
+        // Intentamos leer el JSON mágico de la IA
+        respuestaIA = JSON.parse(data.rawJson);
+      } catch (parseError) {
+        // SALVAVIDAS: Si la IA por error manda texto normal en lugar de JSON, 
+        // no rompemos la página, simplemente mostramos lo que dijo.
+        console.warn("La IA no devolvió un JSON perfecto, usando texto crudo.");
+        respuestaIA = { mensaje: data.rawJson, accion: 'NINGUNA' };
+      }
 
+      // 1. Mostramos el mensaje en pantalla
       setMessages(prev => [...prev, { text: respuestaIA.mensaje, isBot: true }]);
 
-      if (respuestaIA.accion === 'NAVIGATE_CATALOG') {
-        setTimeout(() => { navigate('/catalogo'); }, 1500); 
-      } else if (respuestaIA.accion === 'NAVIGATE_HOME') {
-        setTimeout(() => { navigate('/inicio'); }, 1500);
+      // 2. 🪄 EL ENRUTADOR MÁGICO (Ahora entiende todas las acciones) 🪄
+      const accion = respuestaIA.accion ? respuestaIA.accion.trim() : 'NINGUNA';
+
+      if (accion !== 'NINGUNA') {
+        setTimeout(() => {
+         switch(accion) {
+            case 'NAVIGATE_CATALOG':
+              navigate('/catalogo');
+              break;
+            case 'NAVIGATE_HOME':
+              navigate('/inicio');
+              break;
+            case 'NAVIGATE_GARAGE':
+              navigate('/dashboard/cliente'); // <-- ¡Corregido!
+              break;
+            case 'NAVIGATE_MY_INVENTORY':
+              navigate('/dashboard/store'); // <-- ¡Corregido!
+              break;
+            case 'NAVIGATE_USERS':
+            case 'NAVIGATE_STORES':
+              navigate('/dashboard/admin'); // <-- ¡Corregido!
+              break;
+            default:
+              console.log("Acción desconocida:", accion);
+              break;
+          }
+        }, 1500); // 1.5 segundos de pausa para que leas el mensaje antes de viajar
       }
       
     } catch (error) {
@@ -83,12 +120,10 @@ export default function ChatWindow() {
     }
   };
 
-  // 3. 🪄 EL TRUCO MÁGICO: Si no está logueado, React devuelve "null" (No dibuja nada en pantalla)
   if (!estaAutenticado) {
     return null; 
   }
 
-  // 4. Si SÍ está logueado, dibuja el botón y la ventana normal
   return (
     <>
       <button 

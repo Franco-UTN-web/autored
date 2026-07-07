@@ -11,7 +11,7 @@ export default function Footer() {
             {/* Si tienes un logo con letras blancas úsalo, sino este funciona bien con brillo adaptado */}
             <img src="/logo.jpeg" alt="AutoRed" className="h-10 object-contain rounded-sm" />
             <p className="text-gray-400 text-xs font-medium leading-relaxed max-w-xs">
-              Distribuidora líder de autopartes al por mayor y menor. Conectando sucursales para ofrecer el mejor stock real al instante.
+              Distribuidora líder de autopartes al por mayor y menor. Conectando sucursales para ofrecer el mejor stock al instante.
             </p>
           </div>
 
@@ -52,8 +52,6 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} AutoRed. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-xs font-black text-gray-500">
-            <span className="hover:text-white cursor-pointer">Sincronización Cloud</span>
-            <span>&bull;</span>
             <span className="hover:text-white cursor-pointer">Multi-sucursal v1.0</span>
           </div>
         </div>

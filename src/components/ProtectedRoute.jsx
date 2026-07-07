@@ -1,31 +1,61 @@
 import { Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
-  // 1. Buscamos si hay un usuario conectado en la memoria del navegador
-  let usuarioLogueado = null;
-  let rolUsuario = null;
+  const [estado, setEstado] = useState('cargando');
+  const [usuario, setUsuario] = useState(null);
 
-  try {
-    const datosUsuarioJson = localStorage.getItem('user_data');
-    if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
-      usuarioLogueado = JSON.parse(datosUsuarioJson);
-      rolUsuario = usuarioLogueado?.user_metadata?.role;
-    }
-  } catch (error) {
-    console.error("Error leyendo la sesión:", error);
+  useEffect(() => {
+    const verificarAcceso = async () => {
+      const sessionData = localStorage.getItem('user_data');
+      if (!sessionData || sessionData === "undefined") {
+        setEstado('denegado');
+        return;
+      }
+
+      const userData = JSON.parse(sessionData);
+      setUsuario(userData);
+
+      try {
+        // Le preguntamos a Java si este usuario no está suspendido
+        // (Asumiendo que tienes este endpoint o el de obtener todos los usuarios)
+        const res = await fetch('http://localhost:8080/api/admin/usuarios'); 
+        if (res.ok) {
+          const usuariosDB = await res.json();
+          const miUsuarioBD = usuariosDB.find(u => u.id === userData.id);
+          
+          if (miUsuarioBD && miUsuarioBD.estado === 'Suspendido') {
+            // ¡Cuenta suspendida! Lo sacamos del sistema
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('session_token');
+            alert("Acceso denegado: Tu cuenta de AutoRed ha sido suspendida por el administrador.");
+            setEstado('suspendido');
+            return;
+          }
+        }
+        setEstado('permitido');
+      } catch (error) {
+        // Si el servidor está apagado, lo dejamos pasar por ahora (o puedes bloquearlo)
+        setEstado('permitido'); 
+      }
+    };
+
+    verificarAcceso();
+  }, []);
+
+  if (estado === 'cargando') {
+    return <div className="flex h-screen items-center justify-center font-bold text-gray-500">Verificando credenciales de seguridad...</div>;
   }
 
-  // 2. REGLA UNO: Si no está logueado, mándalo al Login directamente
-  if (!usuarioLogueado) {
+  if (estado === 'suspendido' || estado === 'denegado') {
     return <Navigate to="/login" replace />;
   }
 
-  // 3. REGLA DOS: Si la ruta exige un rol específico y no lo tiene, mándalo al Inicio
-  // (Por ejemplo, si un "comprador" intenta entrar al panel de "tienda")
-  if (allowedRoles && !allowedRoles.includes(rolUsuario)) {
-    return <Navigate to="/" replace />;
+  // Verificamos el rol
+  const userRole = usuario?.user_metadata?.role || 'comprador';
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    return <Navigate to="/inicio" replace />;
   }
 
-  // 4. Si pasó todos los filtros de seguridad, déjalo ver la página que pidió
   return children;
 }
