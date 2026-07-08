@@ -74,7 +74,7 @@ export default function DirectorioSucursales() {
         setMapCenter(nuevasCoordenadas);
         setCoordenadasMarcador(nuevasCoordenadas);
       } else {
-        // 🔥 Reemplazamos el alert nativo por nuestro estado
+        //  Reemplazamos el alert nativo por nuestro estado
         setAlertaMapa("📍 OpenStreetMap no pudo ubicar la dirección exacta. Mostrando el mapa general.");
       }
     } catch (error) {

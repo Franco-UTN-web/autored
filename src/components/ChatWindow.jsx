@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // 1. IMPORTAMOS useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function ChatWindow() {
+  
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { text: "¡Hola! Soy tu copiloto en AutoRed 🚗. ¿En qué te ayudo?", isBot: true }
@@ -13,22 +14,27 @@ export default function ChatWindow() {
   
   const messagesEndRef = useRef(null);
   const navigate = useNavigate(); 
-  const location = useLocation(); // 2. OBTENEMOS LA RUTA ACTUAL
+  const location = useLocation();
 
-  // 3. SE EJECUTA CADA VEZ QUE CAMBIAS DE PÁGINA (por el location.pathname)
+  const sugerencias = {
+    comprador: ["Buscar balatas cerámicas", "¿Cómo registro mi auto?", "Ver catálogo"],
+    tienda: ["Redactar descripción de venta", "Ver mi inventario", "¿Cómo destaco un producto?"],
+    admin: ["Auditar refaccionarias", "Revisar usuarios", "Ver métricas"]
+  };
+
   useEffect(() => {
     try {
       const datos = localStorage.getItem('user_data');
       if (datos && datos !== "undefined") {
         setEstaAutenticado(true);
       } else {
-        setEstaAutenticado(false); // Oculta el bot si cierras sesión
+        setEstaAutenticado(false); 
         setIsOpen(false);
       }
     } catch (e) {
       console.warn("Error al leer la sesión");
     }
-  }, [location.pathname]); // <--- AQUÍ ESTÁ LA MAGIA
+  }, [location.pathname]); 
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,11 +77,8 @@ export default function ChatWindow() {
       
       let respuestaIA;
       try {
-        // Intentamos leer el JSON mágico de la IA
         respuestaIA = JSON.parse(data.rawJson);
       } catch (parseError) {
-        // SALVAVIDAS: Si la IA por error manda texto normal en lugar de JSON, 
-        // no rompemos la página, simplemente mostramos lo que dijo.
         console.warn("La IA no devolvió un JSON perfecto, usando texto crudo.");
         respuestaIA = { mensaje: data.rawJson, accion: 'NINGUNA' };
       }
@@ -83,33 +86,41 @@ export default function ChatWindow() {
       // 1. Mostramos el mensaje en pantalla
       setMessages(prev => [...prev, { text: respuestaIA.mensaje, isBot: true }]);
 
-      // 2. 🪄 EL ENRUTADOR MÁGICO (Ahora entiende todas las acciones) 🪄
+      // 2. 🪄 EL ENRUTADOR MÁGICO 🪄
       const accion = respuestaIA.accion ? respuestaIA.accion.trim() : 'NINGUNA';
 
       if (accion !== 'NINGUNA') {
         setTimeout(() => {
-         switch(accion) {
-            case 'NAVIGATE_CATALOG':
-              navigate('/catalogo');
-              break;
-            case 'NAVIGATE_HOME':
-              navigate('/inicio');
-              break;
-            case 'NAVIGATE_GARAGE':
-              navigate('/dashboard/cliente'); // <-- ¡Corregido!
-              break;
-            case 'NAVIGATE_MY_INVENTORY':
-              navigate('/dashboard/store'); // <-- ¡Corregido!
-              break;
-            case 'NAVIGATE_USERS':
-            case 'NAVIGATE_STORES':
-              navigate('/dashboard/admin'); // <-- ¡Corregido!
-              break;
-            default:
-              console.log("Acción desconocida:", accion);
-              break;
+          
+          // 🔥 Lógica especial para abrir productos directamente 🔥
+          if (accion === 'OPEN_PRODUCT' && respuestaIA.producto_id) {
+            navigate(`/producto/${respuestaIA.producto_id}`);
+          } 
+          // 🚀 Navegación de paneles generales
+          else {
+            switch(accion) {
+              case 'NAVIGATE_CATALOG':
+                navigate('/catalogo');
+                break;
+              case 'NAVIGATE_HOME':
+                navigate('/inicio');
+                break;
+              case 'NAVIGATE_GARAGE':
+                navigate('/dashboard/customer'); 
+                break;
+              case 'NAVIGATE_MY_INVENTORY':
+                navigate('/dashboard/store'); 
+                break;
+              case 'NAVIGATE_USERS':
+              case 'NAVIGATE_STORES':
+                navigate('/dashboard/admin'); 
+                break;
+              default:
+                console.log("Acción desconocida:", accion);
+                break;
+            }
           }
-        }, 1500); // 1.5 segundos de pausa para que leas el mensaje antes de viajar
+        }, 1500); 
       }
       
     } catch (error) {
@@ -164,6 +175,19 @@ export default function ChatWindow() {
               </div>
             )}
             <div ref={messagesEndRef} />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto p-2 pb-0 scrollbar-hide">
+            {sugerencias[obtenerRolActual()]?.map((sug, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setInputMsg(sug)}
+                className="whitespace-nowrap bg-blue-50 text-autoblue hover:bg-autoblue hover:text-white border border-blue-100 px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
+              >
+                {sug}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={handleSend} className="p-3 bg-white border-t border-gray-100 flex gap-2">

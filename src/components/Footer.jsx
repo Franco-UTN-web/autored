@@ -26,6 +26,8 @@ export default function Footer() {
             </ul>
           </div>
 
+          
+
           {/* Columna 3: Soporte */}
           <div>
             <h4 className="text-xs font-black uppercase text-gray-500 tracking-wider mb-4">Plataforma</h4>

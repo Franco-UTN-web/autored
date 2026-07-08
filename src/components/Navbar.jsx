@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Home, Info, MapPin, Package, Store, LogOut, LayoutDashboard, User, LogIn, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // 1. Leemos la sesión directamente de la "magia" guardada en localStorage
+  // 1. Leemos la sesión
   let rol = null;
   try {
     const datosUsuarioJson = localStorage.getItem('user_data');
     if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
       const usuarioLogueado = JSON.parse(datosUsuarioJson);
-      // Aquí está leyendo el rol modificado por Login.jsx
       rol = usuarioLogueado?.user_metadata?.role;
     }
   } catch (error) {
@@ -21,138 +21,135 @@ export default function Navbar() {
   // 2. Lógica Dinámica de Navegación
   const handleAccionPrincipal = () => {
     setIsMenuOpen(false); 
-    
-    if (rol === 'tienda') {
-      navigate('/dashboard/store');
-    } else if (rol === 'admin') {
-      navigate('/dashboard/admin');
-    } else if (rol === 'comprador') {
-      navigate('/dashboard/customer'); 
-    } else {
-      navigate('/login'); 
-    }
+    if (rol === 'tienda') navigate('/dashboard/store');
+    else if (rol === 'admin') navigate('/dashboard/admin');
+    else if (rol === 'comprador') navigate('/dashboard/customer'); 
+    else navigate('/login'); 
   };
 
-  // 3. Lógica Dinámica de Texto del Botón
+  // 3. Textos e Íconos dinámicos para el botón principal
   const obtenerTextoBoton = () => {
-    if (rol === 'tienda') return 'Ir a Mi Mostrador';
+    if (rol === 'tienda') return 'Mi Mostrador';
     if (rol === 'admin') return 'Panel de Control';
     if (rol === 'comprador') return 'Mi Cuenta';
-    return 'Ingresar al Portal';
+    return 'Ingresar';
+  };
+
+  const IconoBoton = () => {
+    if (rol === 'tienda') return <Store size={18} />;
+    if (rol === 'admin') return <LayoutDashboard size={18} />;
+    if (rol === 'comprador') return <User size={18} />;
+    return <LogIn size={18} />;
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-24">
+        <div className="flex items-center justify-between h-20 sm:h-24">
           
-         <div className="flex items-center">
-            <Link to="/" className="flex items-center">
+          {/* LOGO */}
+          <div className="flex items-center shrink-0">
+            <Link to="/" className="flex items-center transition-transform hover:scale-105">
               <img 
                 src="/logo1.png" 
                 alt="AutoRed Logo" 
-                className="h-24 w-auto object-contain transform scale-[1.6] origin-left drop-shadow-sm" 
+                className="h-20 sm:h-24 w-auto object-contain transform scale-[1.4] sm:scale-[1.6] origin-left drop-shadow-sm" 
               />
             </Link>
           </div>
 
           {/* MENÚ ESCRITORIO */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-8">
-              <Link to="/inicio" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
-                Inicio
-              </Link>
+          <div className="hidden lg:flex items-center space-x-2">
+            
+            <Link to="/inicio" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
+              <Home size={18} /> Inicio
+            </Link>
 
-              <Link to="/nosotros" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
-                Nosotros
-              </Link>
-              
-              <Link to="/directorio" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
-                Sucursales
-              </Link>
-              
-              <Link to="/catalogo" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
-                Catálogo
-              </Link>
-              
-              {/* Oculto para tiendas y administradores */}
-              {(rol !== 'tienda' && rol !== 'admin') && (
-                <Link to="/registro-negocio" className="text-gray-700 hover:text-autored transition-colors px-3 py-2 rounded-md font-medium">
-                  Suma tu Negocio
-                </Link>
-              )}
+            <Link to="/nosotros" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
+              <Info size={18} /> Nosotros
+            </Link>
+            
+            <Link to="/directorio" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
+              <MapPin size={18} /> Sucursales
+            </Link>
+            
+            <Link to="/catalogo" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
+              <Package size={18} /> Catálogo
+            </Link>
 
-              <button 
-                onClick={handleAccionPrincipal}
-                className="bg-autoblue hover:bg-blue-800 text-white px-6 py-2.5 rounded-md font-medium transition-colors shadow-md ml-2"
-              >
-                {obtenerTextoBoton()}
-              </button>
+            {/* DIVISOR VERTICAL */}
+            <div className="h-6 w-px bg-gray-200 mx-2"></div>
 
-              {rol && (
-                 <button 
-                   onClick={() => {
-                     localStorage.clear();
-                     window.location.href = '/login';
-                   }}
-                   className="text-gray-400 hover:text-red-500 font-bold text-sm ml-4 transition-colors"
-                 >
-                   Cerrar Sesión
-                 </button>
-              )}
-            </div>
+            {/* BOTÓN PRINCIPAL DINÁMICO */}
+            <button 
+              onClick={handleAccionPrincipal}
+              className="flex items-center gap-2 bg-gradient-to-r from-autoblue to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              <IconoBoton /> {obtenerTextoBoton()}
+            </button>
+
+            {/* BOTÓN CERRAR SESIÓN */}
+            {rol && (
+               <button 
+                 onClick={() => {
+                   localStorage.clear();
+                   window.location.href = '/login';
+                 }}
+                 title="Cerrar Sesión"
+                 className="flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-xl transition-all ml-1"
+               >
+                 <LogOut size={20} />
+               </button>
+            )}
           </div>
 
-          {/* BOTÓN MÓVIL */}
-          <div className="md:hidden flex items-center">
+          {/* BOTÓN HAMBURGUESA (MÓVIL) */}
+          <div className="lg:hidden flex items-center">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-autoblue focus:outline-none p-2"
+              className="text-gray-600 hover:text-autoblue hover:bg-blue-50 focus:outline-none p-2.5 rounded-xl transition-colors"
             >
-              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {isMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
+              {isMenuOpen ? <X size={26} /> : <Menu size={26} />}
             </button>
           </div>
 
         </div>
       </div>
 
-      {/* MENÚ MÓVIL */}
+      {/* MENÚ MÓVIL DESPLEGABLE */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 shadow-xl absolute w-full left-0 animate-fade-in">
-          <div className="px-4 pt-2 pb-6 space-y-2 flex flex-col">
-            <Link to="/inicio" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
-              Inicio
+        <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-2xl absolute w-full left-0 animate-fade-in">
+          <div className="px-4 pt-4 pb-6 space-y-2 flex flex-col max-h-[80vh] overflow-y-auto">
+            
+            <Link to="/inicio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
+              <Home size={20} className="text-gray-400" /> Inicio
             </Link>
 
-            <Link to="/nosotros" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
-              Nosotros
+            <Link to="/nosotros" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
+              <Info size={20} className="text-gray-400" /> Nosotros
             </Link>
             
-            <Link to="/directorio" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
-              Sucursales
+            <Link to="/directorio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
+              <MapPin size={20} className="text-gray-400" /> Sucursales
             </Link>
 
-            <Link to="/catalogo" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
-              Catálogo
+            <Link to="/catalogo" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
+              <Package size={20} className="text-gray-400" /> Catálogo
             </Link>
 
             {(rol !== 'tienda' && rol !== 'admin') && (
-              <Link to="/registro-negocio" onClick={() => setIsMenuOpen(false)} className="text-gray-700 hover:text-autored hover:bg-gray-50 block px-3 py-3 rounded-md text-base font-medium border-b border-gray-50">
-                Suma tu Negocio
+              <Link to="/registro-negocio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
+                <Store size={20} className="text-gray-400" /> Suma tu Negocio
               </Link>
             )}
             
+            <div className="border-t border-gray-100 my-2 pt-2"></div>
+
             <button 
               onClick={handleAccionPrincipal}
-              className="w-full text-left bg-autoblue text-white hover:bg-blue-800 block px-3 py-3 rounded-md text-base font-medium text-center mt-4 shadow-sm"
+              className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-autoblue to-blue-800 text-white hover:opacity-90 px-4 py-3.5 rounded-xl font-bold shadow-md transition-opacity"
             >
-              {obtenerTextoBoton()}
+              <IconoBoton /> {obtenerTextoBoton()}
             </button>
 
             {rol && (
@@ -161,9 +158,9 @@ export default function Navbar() {
                    localStorage.clear();
                    window.location.href = '/login';
                  }}
-                 className="w-full text-center text-red-500 hover:bg-red-50 block px-3 py-3 rounded-md text-base font-bold mt-2 border border-red-100"
+                 className="flex items-center justify-center gap-2 w-full text-red-600 bg-red-50 hover:bg-red-100 px-4 py-3.5 rounded-xl font-bold transition-colors mt-2"
                >
-                 Cerrar Sesión
+                 <LogOut size={20} /> Cerrar Sesión
                </button>
             )}
           </div>

@@ -58,8 +58,14 @@ export default function ProductDetail() {
         const dataTiendas = await resTiendas.json();
         
         // 1. Encontrar el inventario exacto que el usuario clickeó
-        const itemEncontrado = dataInventario.find(item => item.id === id);
-        if (!itemEncontrado) throw new Error('La pieza que buscas no existe o fue eliminada.');
+       let itemEncontrado = dataInventario.find(item => item.id === id);
+        
+        //  Si no lo encontró, lo busca por ID de Pieza (El flujo del Chatbot)
+        if (!itemEncontrado) {
+          itemEncontrado = dataInventario.find(item => item.pieza && item.pieza.id === id);
+        }
+
+        if (!itemEncontrado) throw new Error('La pieza que buscas no existe en ningún inventario activo.');
         
         setProductoPrincipal(itemEncontrado);
 
