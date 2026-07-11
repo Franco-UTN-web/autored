@@ -60,7 +60,16 @@ export default function DirectorioSucursales() {
     setTiendaSeleccionada(tienda);
     setAlertaMapa(''); // Limpiamos cualquier alerta previa
     
-    const direccionCompleta = `${tienda.calle} ${tienda.numero}, ${tienda.colonia}, ${tienda.municipio}, ${tienda.estadoRep}, México`;
+    // 🔥 1. LA MAGIA: Si ya tenemos las coordenadas exactas de la BD, las usamos instantáneamente
+    if (tienda.latitud && tienda.longitud) {
+      const coordsExactas = [parseFloat(tienda.latitud), parseFloat(tienda.longitud)];
+      setMapCenter(coordsExactas);
+      setCoordenadasMarcador(coordsExactas);
+      return; // Detenemos la función aquí, ya no necesitamos internet ni APIs
+    }
+
+    // 2. FALLBACK (Plan B): Solo si es una tienda vieja que no tiene coordenadas guardadas
+    const direccionCompleta = `${tienda.calle} ${tienda.numero}, ${tienda.colonia}, ${tienda.ciudad || tienda.municipio}, ${tienda.estadoRep}, México`;
 
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccionCompleta)}`);
@@ -74,15 +83,13 @@ export default function DirectorioSucursales() {
         setMapCenter(nuevasCoordenadas);
         setCoordenadasMarcador(nuevasCoordenadas);
       } else {
-        //  Reemplazamos el alert nativo por nuestro estado
-        setAlertaMapa("📍 OpenStreetMap no pudo ubicar la dirección exacta. Mostrando el mapa general.");
+        setAlertaMapa("📍 Tienda antigua sin pin exacto. Mostrando el mapa general.");
       }
     } catch (error) {
       console.error("Error buscando coordenadas:", error);
       setAlertaMapa("Hubo un problema al contactar al servidor de mapas. 🔧");
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50 py-10 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -92,11 +99,11 @@ export default function DirectorioSucursales() {
           <p className="text-gray-500 font-medium mt-1">Encuentra la sucursal de AutoRed más cercana a tu taller.</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 h-[75vh]">
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-[75vh]">
           
-          {/* COLUMNA IZQUIERDA: LISTA DE TIENDAS */}
-          <div className="w-full lg:w-1/3 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-gray-100 bg-gray-50">
+        {/* COLUMNA IZQUIERDA (LISTA): Le damos una altura fija de 400px en móvil, y altura completa en PC */}
+          <div className="w-full lg:w-1/3 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col overflow-hidden h-[400px] lg:h-full">
+            <div className="p-4 border-b border-gray-100 bg-gray-50 shrink-0">
               <h3 className="font-black text-gray-900">Sucursales Activas ({sucursales.length})</h3>
             </div>
             
@@ -128,8 +135,8 @@ export default function DirectorioSucursales() {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: LEAFLET MAPS */}
-          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative flex items-center justify-center overflow-hidden z-0">
+          {/* COLUMNA DERECHA (MAPA) */}
+          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative overflow-hidden z-0 min-h-[400px] lg:min-h-[400px] lg:h-full">
             
             {/* 🔥 ALERTA PERSONALIZADA FLOTANTE 🔥 */}
             {alertaMapa && (

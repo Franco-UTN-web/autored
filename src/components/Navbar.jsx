@@ -167,10 +167,6 @@ export default function Navbar() {
             <Link to="/inicio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
               <Home size={20} className="text-gray-400" /> Inicio
             </Link>
-
-            <Link to="/nosotros" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
-              <Info size={20} className="text-gray-400" /> Nosotros
-            </Link>
             
             <Link to="/directorio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
               <MapPin size={20} className="text-gray-400" /> Sucursales
@@ -179,12 +175,6 @@ export default function Navbar() {
             <Link to="/catalogo" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
               <Package size={20} className="text-gray-400" /> Catálogo
             </Link>
-
-            {(rol !== 'tienda' && rol !== 'admin') && (
-              <Link to="/registro-negocio" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-autoblue hover:bg-blue-50 px-4 py-3.5 rounded-xl font-bold transition-colors">
-                <Store size={20} className="text-gray-400" /> Suma tu Negocio
-              </Link>
-            )}
             
             <div className="border-t border-gray-100 my-2 pt-2"></div>
 

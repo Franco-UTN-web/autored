@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import MapaSelector from '../components/MapaAutoRed';
 
 export default function RegistroNegocio() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ export default function RegistroNegocio() {
   const [estado, setEstado] = useState('formulario'); 
   const [mensajeError, setMensajeError] = useState('');
   const [campoActivo, setCampoActivo] = useState('');
+  const [latitud, setLatitud] = useState(null);
+  const [longitud, setLongitud] = useState(null);
 
  
 
@@ -226,20 +229,24 @@ export default function RegistroNegocio() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                  
                   <div className="md:col-span-4">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Calle o Avenida</label>
                     <input 
-                      type="text" value={formData.calle} 
-                      onChange={(e) => setFormData({ ...formData, calle: e.target.value })} 
+                      type="text" 
+                      value={formData.calle || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, calle: e.target.value }))} 
                       onFocus={() => setCampoActivo('calle')} onBlur={() => setCampoActivo('')}
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Av. Universidad" 
                     />
                   </div>
+                  
                   <div className="md:col-span-2">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Número</label>
                     <input 
-                      type="text" value={formData.numero} 
-                      onChange={(e) => setFormData({ ...formData, numero: e.target.value })} 
+                      type="text" 
+                      value={formData.numero || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))} 
                       onFocus={() => setCampoActivo('numero')} onBlur={() => setCampoActivo('')}
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 123 Int B" 
                     />
@@ -248,41 +255,67 @@ export default function RegistroNegocio() {
                   <div className="md:col-span-3">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Colonia</label>
                     <input 
-                      type="text" value={formData.colonia} 
-                      onChange={(e) => setFormData({ ...formData, colonia: e.target.value })} 
+                      type="text" 
+                      value={formData.colonia || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, colonia: e.target.value }))} 
                       onFocus={() => setCampoActivo('colonia')} onBlur={() => setCampoActivo('')}
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Centro" 
                     />
                   </div>
+                  
                   <div className="md:col-span-3">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Código Postal</label>
                     <input 
-                      type="text" value={formData.cp} 
-                      onChange={(e) => setFormData({ ...formData, cp: e.target.value })} 
+                      type="text" 
+                      value={formData.cp || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, cp: e.target.value }))} 
                       onFocus={() => setCampoActivo('cp')} onBlur={() => setCampoActivo('')}
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. 50000" maxLength={5} 
+                    />
+                  </div>
+
+                  {/* MAPA A TAMAÑO COMPLETO */}
+                  <div className="md:col-span-6 w-full my-2">
+                    <MapaSelector 
+                      onCoordenadasSeleccionadas={(lat, lng) => {
+                        setLatitud(lat);
+                        setLongitud(lng);
+                      }}
+                      onDireccionEncontrada={(datosMapa) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          calle: datosMapa.calle || prev.calle,
+                          numero: datosMapa.numero || prev.numero,
+                          colonia: datosMapa.colonia || prev.colonia,
+                          cp: datosMapa.cp || prev.cp,
+                          ciudad: datosMapa.ciudad || prev.ciudad,
+                          estado_rep: datosMapa.estado_rep || prev.estado_rep 
+                        }));
+                      }}
                     />
                   </div>
 
                   <div className="md:col-span-3">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Ciudad / Municipio</label>
                     <input 
-                      type="text" value={formData.ciudad} 
-                      onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })} 
+                      type="text" 
+                      value={formData.ciudad || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, ciudad: e.target.value }))} 
                       onFocus={() => setCampoActivo('ciudad')} onBlur={() => setCampoActivo('')}
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" placeholder="Ej. Toluca" 
                     />
                   </div>
+                  
                   <div className="md:col-span-3">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Estado</label>
                     <select 
-                      value={formData.estado_rep} 
-                      onChange={(e) => setFormData({ ...formData, estado_rep: e.target.value })} 
+                      value={formData.estado_rep || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, estado_rep: e.target.value }))} 
                       className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue cursor-pointer"
                     >
                       <option value="">Selecciona un estado...</option>
                       <option value="Aguascalientes">Aguascalientes</option>
-                      <option value="CDMX">Ciudad de México</option>
+                      <option value="Ciudad de México">Ciudad de México</option>
                       <option value="Estado de México">Estado de México</option>
                       <option value="Jalisco">Jalisco</option>
                       <option value="Nuevo León">Nuevo León</option>
