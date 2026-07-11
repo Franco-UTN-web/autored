@@ -147,10 +147,30 @@ const productosFiltrados = useMemo(() => {
     <div className="min-h-screen bg-gray-50 text-gray-900 py-8 font-sans pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* ENCABEZADO */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Catálogo de Autopartes</h1>
-          <p className="text-gray-500 font-medium mt-1">Encuentra tu refacción y resérvala directo con el vendedor.</p>
+        {/* ENCABEZADO DIRECTO Y MODERNO */}
+        <div className="mb-8 relative overflow-hidden bg-white border border-gray-200 rounded-3xl p-8 sm:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="w-8 h-1.5 bg-autored rounded-full"></span>
+              <span className="text-autored font-black uppercase tracking-widest text-xs">Gestíon de Inventario</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-black text-autoblue tracking-tight mb-2 leading-tight">
+              Catálogo de Autopartes
+            </h1>
+            <p className="text-gray-500 font-medium max-w-xl text-sm sm:text-base mt-3">
+              Encuentra la pieza exacta para tu vehículo, compara opciones locales y contacta al vendedor sin intermediarios.
+            </p>
+          </div>
+
+          {/* Icono de agua decorativo a la derecha */}
+          <div className="hidden md:block relative">
+            <svg className="w-32 h-32 text-blue-50 transform rotate-12" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19.39 5.81L16.2 3.03a1.98 1.98 0 0 0-1.32-.48H9.12c-.48 0-.95.17-1.32.48L4.61 5.81a2 2 0 0 0-.66 1.33L3 17.5c0 1.38 1.12 2.5 2.5 2.5h13c1.38 0 2.5-1.12 2.5-2.5l-.95-10.36a1.98 1.98 0 0 0-.66-1.33zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"></path>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-12 h-12 bg-autoblue/10 rounded-full animate-pulse"></div>
+            </div>
+          </div>
         </div>
 
         {/* ======================================================== */}
@@ -253,12 +273,24 @@ const productosFiltrados = useMemo(() => {
               </select>
             </div>
 
-            {cargando && <div className="flex justify-center items-center py-20"><span className="w-8 h-8 border-4 border-autoblue border-t-transparent rounded-full animate-spin"></span></div>}
             
+            
+           {/* ESTADO VACÍO ELEGANTE */}
             {!cargando && productosFiltrados.length === 0 && (
-              <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
-                <p className="text-gray-500 font-medium text-lg">No se encontraron piezas con estos filtros.</p>
-                <button onClick={limpiarFiltros} className="mt-4 text-autoblue font-bold hover:underline">Restablecer búsqueda</button>
+              <div className="bg-white border border-gray-200 rounded-3xl p-12 sm:p-20 text-center shadow-sm flex flex-col items-center justify-center mt-4">
+                <div className="bg-gray-50 p-6 rounded-full mb-6 border border-gray-100 shadow-inner">
+                  <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">No encontramos esa pieza</h3>
+                <p className="text-gray-500 font-medium max-w-md mx-auto mb-8">
+                  No te preocupes. Intenta eliminar algunos filtros, o mejor aún, <strong className="text-autoblue">pregúntale directamente al Copiloto IA</strong> que tienes en la esquina de tu pantalla.
+                </p>
+                <button 
+                  onClick={limpiarFiltros} 
+                  className="bg-autoblue hover:bg-blue-900 text-white font-black px-8 py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                >
+                  Limpiar todos los filtros
+                </button>
               </div>
             )}
 

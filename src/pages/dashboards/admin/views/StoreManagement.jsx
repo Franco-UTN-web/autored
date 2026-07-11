@@ -332,13 +332,30 @@ export default function StoreManagement({
                       <label className="block text-xs font-bold text-gray-700 mb-1">Nombre Comercial</label>
                       <input type="text" name="nombre" value={modalEditar.tienda.nombre || ''} onChange={handleEditChange} className="w-full px-3 py-2 border rounded-lg text-sm" required />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">RFC</label>
-                      <input type="text" name="rfc" value={modalEditar.tienda.rfc || ''} onChange={handleEditChange} className="w-full px-3 py-2 border rounded-lg text-sm" required />
+                 <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">RFC (Intocable)</label>
+                      <input 
+                        type="text" 
+                        name="rfc" 
+                        value={modalEditar.tienda.rfc || ''} 
+                        disabled 
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 font-mono cursor-not-allowed" 
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
-                      <input type="text" name="telefono" value={modalEditar.tienda.telefono || ''} onChange={handleEditChange} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono (10 dígitos)</label>
+                      <input 
+                        type="tel" 
+                        name="telefono" 
+                        maxLength={10}
+                        value={modalEditar.tienda.telefono || ''} 
+                        onChange={(e) => {
+                          // Solo permite números
+                          const soloNumeros = e.target.value.replace(/\D/g, '');
+                          handleEditChange({ target: { name: 'telefono', value: soloNumeros } });
+                        }} 
+                        className="w-full px-3 py-2 border rounded-lg text-sm tracking-widest" 
+                      />
                     </div>
                   </div>
 
@@ -364,9 +381,24 @@ export default function StoreManagement({
                       <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad</label>
                       <input type="text" name="ciudad" value={modalEditar.tienda.ciudad || ''} onChange={handleEditChange} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Estado</label>
-                      <input type="text" name="estadoRep" value={modalEditar.tienda.estadoRep || ''} onChange={handleEditChange} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                   <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Estado de la República</label>
+                      <select 
+                        name="estadoRep" 
+                        value={modalEditar.tienda.estadoRep || ''} 
+                        onChange={handleEditChange} 
+                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white cursor-pointer" 
+                        required
+                      >
+                        <option value="">Selecciona un Estado...</option>
+                        <option value="Aguascalientes">Aguascalientes</option>
+                        <option value="Baja California">Puebla</option>
+                        <option value="Ciudad de México">Ciudad de México</option>
+                        <option value="Estado de México">Estado de México</option>
+                        <option value="Jalisco">Jalisco</option>
+                        <option value="Nuevo León">Nuevo León</option>
+                        {/* Agrega el resto de los estados aquí */}
+                      </select>
                     </div>
                   </div>
 

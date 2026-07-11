@@ -87,7 +87,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto bg-white p-3 rounded-2xl border border-gray-200 shadow-xl flex flex-col md:flex-row gap-3 transition-transform hover:-translate-y-1 duration-300">
             <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <svg className="h-5 w-5 text-autoblue animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
               </div>
               <input 
                 type="text" 
@@ -118,6 +118,22 @@ export default function Home() {
               Buscar Pieza
             </button>
           </div>
+
+{/* Carrusel de Marcas (Trust Badges) */}
+          <div className="mt-12 pt-8 border-t border-gray-100/50">
+            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">
+              Encuentra las mejores marcas del mercado
+            </p>
+            <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+              {/* Puedes reemplazar los src con logos reales en PNG que descargues */}
+              <span className="text-xl font-black text-gray-800 flex items-center gap-1"><div className="w-4 h-4 rounded-full bg-blue-600"></div> BOSCH</span>
+              <span className="text-xl font-black text-gray-800 flex items-center gap-1"><div className="w-4 h-4 bg-yellow-400"></div> LUK</span>
+              <span className="text-xl font-black text-gray-800 flex items-center gap-1"><div className="w-4 h-4 bg-red-600 rounded-sm"></div> ACDelco</span>
+              <span className="text-xl font-black text-gray-800 italic">Valeo</span>
+              <span className="text-xl font-black text-gray-800 tracking-tighter">HELLA</span>
+            </div>
+          </div>
+          
         </div>
       </div>
 

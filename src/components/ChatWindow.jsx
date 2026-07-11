@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown'; // 🔥 IMPORTAMOS REACT-MARKDOWN 🔥
 
 export default function ChatWindow() {
   
@@ -83,41 +84,24 @@ export default function ChatWindow() {
         respuestaIA = { mensaje: data.rawJson, accion: 'NINGUNA' };
       }
 
-      // 1. Mostramos el mensaje en pantalla
       setMessages(prev => [...prev, { text: respuestaIA.mensaje, isBot: true }]);
 
-      // 2. 🪄 EL ENRUTADOR MÁGICO 🪄
       const accion = respuestaIA.accion ? respuestaIA.accion.trim() : 'NINGUNA';
 
       if (accion !== 'NINGUNA') {
         setTimeout(() => {
-          
-          // 🔥 Lógica especial para abrir productos directamente 🔥
           if (accion === 'OPEN_PRODUCT' && respuestaIA.producto_id) {
             navigate(`/producto/${respuestaIA.producto_id}`);
           } 
-          // 🚀 Navegación de paneles generales
           else {
             switch(accion) {
-              case 'NAVIGATE_CATALOG':
-                navigate('/catalogo');
-                break;
-              case 'NAVIGATE_HOME':
-                navigate('/inicio');
-                break;
-              case 'NAVIGATE_GARAGE':
-                navigate('/dashboard/customer'); 
-                break;
-              case 'NAVIGATE_MY_INVENTORY':
-                navigate('/dashboard/store'); 
-                break;
+              case 'NAVIGATE_CATALOG': navigate('/catalogo'); break;
+              case 'NAVIGATE_HOME': navigate('/inicio'); break;
+              case 'NAVIGATE_GARAGE': navigate('/dashboard/customer'); break;
+              case 'NAVIGATE_MY_INVENTORY': navigate('/dashboard/store'); break;
               case 'NAVIGATE_USERS':
-              case 'NAVIGATE_STORES':
-                navigate('/dashboard/admin'); 
-                break;
-              default:
-                console.log("Acción desconocida:", accion);
-                break;
+              case 'NAVIGATE_STORES': navigate('/dashboard/admin'); break;
+              default: console.log("Acción desconocida:", accion); break;
             }
           }
         }, 1500); 
@@ -137,6 +121,7 @@ export default function ChatWindow() {
 
   return (
     <>
+      {/* Botón flotante para abrir chat */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 bg-autoblue hover:bg-blue-900 text-white p-4 rounded-full shadow-2xl transition-transform hover:scale-110 z-[100] flex items-center justify-center"
@@ -149,57 +134,75 @@ export default function ChatWindow() {
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] flex flex-col overflow-hidden animate-fade-in" style={{ height: '500px', maxHeight: '80vh' }}>
+        <div className="fixed bottom-24 right-6 w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 z-[100] flex flex-col overflow-hidden animate-fade-in" style={{ height: '550px', maxHeight: '85vh' }}>
           
-          <div className="bg-autoblue p-4 text-white flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1">
+          {/* Header del Chat */}
+          <div className="bg-gradient-to-r from-autoblue to-blue-800 p-4 text-white flex items-center gap-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full blur-xl -mr-10 -mt-10"></div>
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shrink-0 relative z-10 shadow-sm">
               <img src="/logo.jpeg" alt="AutoRed Bot" className="w-full h-full object-contain rounded-full" />
             </div>
-            <div>
-              <h3 className="font-black text-sm">Copiloto AutoRed</h3>
-              <p className="text-[10px] text-blue-200 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Seguro • Privado
+            <div className="relative z-10">
+              <h3 className="font-black text-base leading-tight mb-0.5">Copiloto AutoRed</h3>
+              <p className="text-[11px] text-blue-200 flex items-center gap-1 font-medium tracking-wide uppercase">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span> En línea
               </p>
             </div>
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3 scroll-smooth">
+          {/* Área de Mensajes */}
+          <div className="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-4 scroll-smooth">
             {messages.map((msg, idx) => (
-              <div key={idx} className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.isBot ? 'bg-white border border-gray-200 text-gray-800 self-start rounded-tl-sm shadow-sm' : 'bg-autoblue text-white self-end rounded-tr-sm shadow-sm'}`}>
-                {msg.text}
+              <div key={idx} className={`max-w-[90%] p-3.5 rounded-2xl text-sm leading-relaxed ${
+                msg.isBot 
+                  ? 'bg-white border border-gray-100 text-gray-800 self-start rounded-tl-sm shadow-sm' 
+                  : 'bg-autoblue text-white self-end rounded-tr-sm shadow-sm'
+              }`}>
+                {msg.isBot ? (
+                  // 🔥 AQUÍ ESTÁ LA MAGIA DEL MARKDOWN 🔥
+                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-autoblue">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.text
+                )}
               </div>
             ))}
             {isLoading && (
-              <div className="bg-white border border-gray-200 text-gray-500 self-start p-3 rounded-2xl rounded-tl-sm text-sm flex gap-1 shadow-sm">
+              <div className="bg-white border border-gray-100 text-gray-400 self-start p-3.5 rounded-2xl rounded-tl-sm text-sm flex gap-1 shadow-sm w-16 justify-center">
                 <span className="animate-bounce">.</span><span className="animate-bounce delay-100">.</span><span className="animate-bounce delay-200">.</span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto p-2 pb-0 scrollbar-hide">
-            {sugerencias[obtenerRolActual()]?.map((sug, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => setInputMsg(sug)}
-                className="whitespace-nowrap bg-blue-50 text-autoblue hover:bg-autoblue hover:text-white border border-blue-100 px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
-              >
-                {sug}
-              </button>
-            ))}
+          {/* Sugerencias Rápidas */}
+          <div className="bg-white pt-2 border-t border-gray-50">
+            <div className="flex gap-2 overflow-x-auto p-3 scrollbar-hide">
+              {sugerencias[obtenerRolActual()]?.map((sug, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setInputMsg(sug)}
+                  className="whitespace-nowrap bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-autoblue border border-gray-200 hover:border-blue-200 px-4 py-2 rounded-full text-xs font-bold transition-all"
+                >
+                  {sug}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <form onSubmit={handleSend} className="p-3 bg-white border-t border-gray-100 flex gap-2">
+          {/* Input Box */}
+          <form onSubmit={handleSend} className="p-3 bg-white flex gap-2">
             <input 
               type="text" 
               value={inputMsg}
               onChange={(e) => setInputMsg(e.target.value)}
-              placeholder="Escribe tu pregunta..." 
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-autoblue transition-all"
+              placeholder="Pregúntame lo que necesites..." 
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-autoblue/20 focus:border-autoblue transition-all"
             />
-            <button type="submit" disabled={!inputMsg.trim() || isLoading} className="bg-autored hover:bg-red-700 text-white p-2.5 rounded-xl transition-colors disabled:opacity-50">
-              <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            <button type="submit" disabled={!inputMsg.trim() || isLoading} className="bg-autoblue hover:bg-blue-800 text-white p-3 rounded-2xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg className="w-5 h-5 ml-0.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
           </form>
         </div>

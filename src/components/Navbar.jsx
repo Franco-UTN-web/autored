@@ -64,18 +64,61 @@ export default function Navbar() {
             <Link to="/inicio" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
               <Home size={18} /> Inicio
             </Link>
-
-            <Link to="/nosotros" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
-              <Info size={18} /> Nosotros
-            </Link>
             
             <Link to="/directorio" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
               <MapPin size={18} /> Sucursales
             </Link>
             
-            <Link to="/catalogo" className="flex items-center gap-2 text-gray-600 hover:text-autoblue hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
-              <Package size={18} /> Catálogo
-            </Link>
+            <div className="relative group">
+              <Link to="/catalogo" className="flex items-center gap-1 text-gray-600 group-hover:text-autoblue group-hover:bg-blue-50 px-4 py-2.5 rounded-xl font-bold text-sm transition-all">
+                <Package size={18} /> Catálogo
+                <svg className="w-4 h-4 ml-1 text-gray-400 group-hover:text-autoblue transition-transform duration-300 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </Link>
+
+              {/* Contenedor del Dropdown (Invisible por defecto, visible en hover) */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[650px] z-50">
+                <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 grid grid-cols-3 gap-8 relative overflow-hidden">
+                  
+                  {/* Decoración de fondo sutil */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full blur-2xl opacity-50 pointer-events-none"></div>
+
+                  {/* Columna 1 */}
+                  <div className="relative z-10">
+                    <h4 className="text-autoblue font-black text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-autored rounded-full"></div> Suspensión
+                    </h4>
+                    <ul className="space-y-3 text-sm font-medium text-gray-500">
+                      <li><Link to="/catalogo?categoria=amortiguadores" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Amortiguadores</Link></li>
+                      <li><Link to="/catalogo?categoria=balatas" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Balatas y Discos</Link></li>
+                      <li><Link to="/catalogo?categoria=horquillas" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Horquillas</Link></li>
+                    </ul>
+                  </div>
+
+                  {/* Columna 2 */}
+                  <div className="relative z-10">
+                    <h4 className="text-autoblue font-black text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-autored rounded-full"></div> Motor
+                    </h4>
+                    <ul className="space-y-3 text-sm font-medium text-gray-500">
+                      <li><Link to="/catalogo?categoria=filtros" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Filtros (Aceite/Aire)</Link></li>
+                      <li><Link to="/catalogo?categoria=bandas" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Bandas de Tiempo</Link></li>
+                      <li><Link to="/catalogo?categoria=bujias" className="hover:text-autored hover:translate-x-1 inline-block transition-transform">Bujías y Bobinas</Link></li>
+                    </ul>
+                  </div>
+
+                  {/* Columna 3: Destacado / Promoción */}
+                  <div className="bg-gray-50 -my-6 -mr-6 p-6 border-l border-gray-100 flex flex-col justify-center relative z-10">
+                    <span className="bg-autored text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded w-max mb-3">Oferta del mes</span>
+                    <h4 className="text-gray-900 font-black mb-2 leading-tight">Kits de Afinación</h4>
+                    <p className="text-xs text-gray-500 mb-4 font-medium">Encuentra todo lo necesario para tu servicio. </p>
+                    <Link to="/catalogo?promocion=afinacion" className="text-xs font-bold text-autoblue hover:text-blue-800 flex items-center gap-1">
+                      Ver kits completos <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                    </Link>
+                  </div>
+
+                </div>
+              </div>
+            </div>
 
             {/* DIVISOR VERTICAL */}
             <div className="h-6 w-px bg-gray-200 mx-2"></div>
