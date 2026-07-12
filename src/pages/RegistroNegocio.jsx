@@ -119,7 +119,9 @@ export default function RegistroNegocio() {
         estadoRep: formData.estado_rep, 
         propietario_id: usuario.id,
         doc_csf_url: urlCSF,
-        doc_ine_url: urlINE
+        doc_ine_url: urlINE,
+        latitud: latitud,
+        longitud: longitud
       };
 
       const response = await fetch('http://localhost:8080/api/establecimientos/solicitar', {

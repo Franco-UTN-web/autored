@@ -15,8 +15,8 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // 🔥 Le agregamos un nuevo prop: onDireccionEncontrada 🔥
-export default function MapaSelector({ onCoordenadasSeleccionadas, onDireccionEncontrada }) {
-  const [posicion, setPosicion] = useState([19.4326018, -99.1332049]);
+export default function MapaSelector({ onCoordenadasSeleccionadas, onDireccionEncontrada, coordenadasIniciales }) {
+  const [posicion, setPosicion] = useState(coordenadasIniciales || [19.4326018, -99.1332049]);
   const [buscando, setBuscando] = useState(false);
   const markerRef = useRef(null);
 

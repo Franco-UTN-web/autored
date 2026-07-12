@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../../../supabase';// Ajusta la ruta según tu proyecto
+import { supabase } from '../../../../supabase'; // Ajusta la ruta según tu proyecto
 import VehicleModal from '../components/VehicleModal';
 
 export default function CustomerGarage({ usuario }) {
   const [vehiculos, setVehiculos] = useState([]);
   const [cargandoVehiculos, setCargandoVehiculos] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
+  
+  // 🔥 NUEVO ESTADO PARA LA ANIMACIÓN 🔥
+  const [vehiculoEliminando, setVehiculoEliminando] = useState(null);
 
   const userId = usuario?.id;
 
@@ -27,15 +30,22 @@ export default function CustomerGarage({ usuario }) {
     fetchVehiculos();
   }, [userId]);
 
-  const handleEliminarVehiculo = async (id) => {
+ const handleEliminarVehiculo = async (id) => {
     if (!window.confirm("¿Seguro que deseas eliminar este vehículo de tu garaje?")) return;
-    try {
-      const { error } = await supabase.from('vehiculos_cliente').delete().eq('id', id);
-      if (error) throw error;
-      await fetchVehiculos(); // Recargamos la lista
-    } catch (error) {
-      alert("Error al eliminar: " + error.message);
-    }
+    
+    // 1. Disparamos la animación visual inmediatamente
+    setVehiculoEliminando(id);
+
+    // 2. Mandamos la orden a Supabase en segundo plano sin detener la ejecución
+    supabase.from('vehiculos_cliente').delete().eq('id', id).then(({error}) => {
+      if (error) console.error("Error silencioso en base de datos:", error);
+    });
+
+    // 3. Retrasamos la eliminación del DOM exactamente los 300ms que dura la animación CSS
+    setTimeout(() => {
+      setVehiculos(prev => prev.filter(v => v.id !== id));
+      setVehiculoEliminando(null);
+    }, 300);
   };
 
   return (
@@ -65,19 +75,31 @@ export default function CustomerGarage({ usuario }) {
             </div>
           ) : (
             vehiculos.map(carro => (
-              <div key={carro.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 group relative hover:border-autoblue transition-colors shadow-sm">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 shadow-sm group-hover:text-autoblue transition-colors">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+             <div 
+                key={carro.id} 
+                className={`bg-gray-50 border border-gray-200 group relative hover:border-autoblue shadow-sm origin-left overflow-hidden transition-all duration-300 ease-out
+                  ${vehiculoEliminando === carro.id 
+                    ? 'opacity-0 max-h-0 scale-95 -translate-x-full mb-0 border-transparent rounded-none' 
+                    : 'opacity-100 max-h-40 scale-100 translate-x-0 mb-3 rounded-xl'
+                  }`}
+              >
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 shadow-sm group-hover:text-autoblue transition-colors">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    </div>
+                    <div>
+                      <p className="font-black text-gray-900 text-lg leading-tight">{carro.marca} {carro.modelo}</p>
+                      <p className="text-sm text-gray-500 font-medium">{carro.anio} {carro.motor ? `• Motor: ${carro.motor}` : ''}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-black text-gray-900 text-lg leading-tight">{carro.marca} {carro.modelo}</p>
-                    <p className="text-sm text-gray-500 font-medium">{carro.anio} {carro.motor ? `• Motor: ${carro.motor}` : ''}</p>
-                  </div>
+                  <button 
+                    onClick={() => handleEliminarVehiculo(carro.id)} 
+                    className="text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-lg hover:border-red-200 hover:bg-red-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  </button>
                 </div>
-                <button onClick={() => handleEliminarVehiculo(carro.id)} className="text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-lg hover:border-red-200 hover:bg-red-50">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
               </div>
             ))
           )}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'; // SE IMPORTÓ useState
+import React, { useState } from 'react'; 
+import MapaAutoRed from "../../../../components/MapaAutoRed";
 
 export default function StoreManagement({
   solicitudes, tiendasActivas, tiendasSuspendidas, metricas, cargando,
@@ -400,6 +401,34 @@ export default function StoreManagement({
                         {/* Agrega el resto de los estados aquí */}
                       </select>
                     </div>
+                   {/* 🔥 MAPA DE EDICIÓN A TAMAÑO COMPLETO 🔥 */}
+                  <div className="md:col-span-2 w-full mt-4">
+                    <MapaAutoRed 
+                      coordenadasIniciales={
+                        modalEditar.tienda.latitud && modalEditar.tienda.longitud 
+                          ? [parseFloat(modalEditar.tienda.latitud), parseFloat(modalEditar.tienda.longitud)]
+                          : null
+                      }
+                      onCoordenadasSeleccionadas={(lat, lng) => {
+                        handleEditChange({ target: { name: 'latitud', value: lat } });
+                        handleEditChange({ target: { name: 'longitud', value: lng } });
+                      }}
+                      onDireccionEncontrada={(datosMapa) => {
+                        setModalEditar(prev => ({
+                          ...prev,
+                          tienda: {
+                            ...prev.tienda,
+                            calle: datosMapa.calle || prev.tienda.calle,
+                            numero: datosMapa.numero || prev.tienda.numero,
+                            colonia: datosMapa.colonia || prev.tienda.colonia,
+                            codigoPostal: datosMapa.cp || prev.tienda.codigoPostal,
+                            ciudad: datosMapa.ciudad || prev.tienda.ciudad,
+                            estadoRep: datosMapa.estado_rep || prev.tienda.estadoRep
+                          }
+                        }));
+                      }}
+                    />
+                  </div>
                   </div>
 
                 </form>

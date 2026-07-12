@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase';
 
 
 export default function ProductCard({ item, miTiendaId, enComparacion, onToggleCompare, rolUsuario }) {
@@ -16,6 +17,34 @@ export default function ProductCard({ item, miTiendaId, enComparacion, onToggleC
   const numParteTexto = pieza.numero_parte ? ` (PN: ${pieza.numero_parte})` : '';
   const mensajeWa = `Hola, vengo de AutoRed. Me interesa la pieza: *${pieza.nombre_comercial}*${numParteTexto} Marca: ${pieza.marca}. ¿Aún tienen stock a $${item.precio_oferta}?`;
   const linkWhatsApp = `https://wa.me/${numeroTelefono}?text=${encodeURIComponent(mensajeWa)}`;
+
+const handleContactar = async (e) => {
+    // Evitamos que el <a> navegue inmediatamente
+    e.preventDefault();
+    
+    try {
+      // 1. Buscamos al usuario logueado en el almacenamiento local
+      const datosUsuarioJson = localStorage.getItem('user_data');
+      if (datosUsuarioJson && datosUsuarioJson !== "undefined") {
+        const usuarioLogueado = JSON.parse(datosUsuarioJson);
+        
+        // 2. Guardamos el registro silenciosamente en Supabase
+        await supabase.from('historial_contactos').insert([{
+          usuario_id: usuarioLogueado.id,
+          inventario_id: item.id,
+          producto: pieza.nombre_comercial,
+          precio: item.precio_oferta,
+          tienda: "AutoRed Sucursal" // Aquí puedes mapear el nombre real de la tienda si lo tienes
+        }]);
+      }
+    } catch (err) {
+      console.error("Error al guardar en el historial:", err);
+    } finally {
+      // 3. Sin importar qué pase, abrimos WhatsApp para no detener la venta
+      window.open(linkWhatsApp, '_blank');
+    }
+  };
+
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative group 
@@ -117,9 +146,15 @@ export default function ProductCard({ item, miTiendaId, enComparacion, onToggleC
               Agotado
             </button>
           ) : (
-            <a href={linkWhatsApp} target="_blank" rel="noopener noreferrer" className="flex-1 bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm">
-              Contactar
-            </a>
+           <a 
+  href={linkWhatsApp} 
+  onClick={handleContactar} 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  className="flex-1 bg-[#25D366] hover:bg-[#1DA851] text-white font-bold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-1 shadow-sm"
+>
+  Contactar
+</a>
           )}
         </div>
       </div>
