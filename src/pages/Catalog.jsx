@@ -49,13 +49,13 @@ export default function Catalog() {
   useEffect(() => {
     const inicializarCatalogo = async () => {
       try {
-        const responseCat = await fetch('http://localhost:8080/api/inventario/todos');
+        const responseCat = await fetch('https://backautored-production.up.railway.app/api/inventario/todos');
         if (!responseCat.ok) throw new Error('Error al cargar el catálogo');
         const dataCat = await responseCat.json();
         setProductos(dataCat);
 
         if (usuarioLogueado) {
-          const resEst = await fetch('http://localhost:8080/api/establecimientos/todos');
+          const resEst = await fetch('https://backautored-production.up.railway.app/api/establecimientos/todos');
           if (resEst.ok) {
             const tiendas = await resEst.json();
             const miTienda = tiendas.find(t => t.propietario_id === usuarioLogueado.id);

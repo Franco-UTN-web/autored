@@ -38,7 +38,7 @@ export default function RegistroNegocio() {
     formData.append('file', file);
     
     // Hablamos con nuestro Java y le decimos que va a la carpeta 'documentos_negocio'
-    const response = await fetch('http://localhost:8080/api/archivos/subir?carpeta=documentos_negocio', {
+    const response = await fetch('https://backautored-production.up.railway.app/api/archivos/subir?carpeta=documentos_negocio', {
       method: 'POST',
       body: formData 
     });
@@ -124,7 +124,7 @@ export default function RegistroNegocio() {
         longitud: longitud
       };
 
-      const response = await fetch('http://localhost:8080/api/establecimientos/solicitar', {
+      const response = await fetch('https://backautored-production.up.railway.app/api/establecimientos/solicitar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

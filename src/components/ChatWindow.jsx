@@ -63,7 +63,7 @@ export default function ChatWindow() {
     try {
       const rolUsuario = obtenerRolActual();
       
-      const response = await fetch('http://localhost:8080/api/chat/mensaje', {
+      const response = await fetch('https://backautored-production.up.railway.app/api/chat/mensaje', {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

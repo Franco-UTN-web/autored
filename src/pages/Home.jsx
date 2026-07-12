@@ -20,8 +20,8 @@ export default function Home() {
     const fetchDatos = async () => {
       try {
         const [resInventario, resEstablecimientos] = await Promise.all([
-          fetch('http://localhost:8080/api/inventario/todos'),
-          fetch('http://localhost:8080/api/establecimientos/todos') 
+          fetch('https://backautored-production.up.railway.app/api/inventario/todos'),
+          fetch('https://backautored-production.up.railway.app/api/establecimientos/todos') 
         ]);
 
         if (resInventario.ok) {

@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       try {
         // Le preguntamos a Java si este usuario no está suspendido
         // (Asumiendo que tienes este endpoint o el de obtener todos los usuarios)
-        const res = await fetch('http://localhost:8080/api/admin/usuarios'); 
+        const res = await fetch('https://backautored-production.up.railway.app/api/admin/usuarios'); 
         if (res.ok) {
           const usuariosDB = await res.json();
           const miUsuarioBD = usuariosDB.find(u => u.id === userData.id);

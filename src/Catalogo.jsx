@@ -7,7 +7,7 @@ function Catalogo() {
 
   useEffect(() => {
     // Aquí hacemos la llamada al servidor de Spring Boot
-    fetch('http://localhost:8080/api/catalogo')
+    fetch('https://backautored-production.up.railway.app/api/catalogo')
       .then(respuesta => respuesta.json())
       .then(datos => {
         setProductos(datos); // Guardamos la lista de refacciones en el estado

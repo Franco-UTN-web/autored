@@ -41,7 +41,7 @@ export default function DirectorioSucursales() {
   useEffect(() => {
     const fetchSucursales = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/establecimientos/todos');
+        const response = await fetch('https://backautored-production.up.railway.app/api/establecimientos/todos');
         if (response.ok) {
           const data = await response.json();
           const activas = data.filter(tienda => tienda.estado === 'APROBADO');

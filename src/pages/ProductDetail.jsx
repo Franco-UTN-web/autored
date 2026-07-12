@@ -48,8 +48,8 @@ export default function ProductDetail() {
       try {
         // 🔥 MAGIA: Pedimos el inventario Y las tiendas al mismo tiempo
         const [resInventario, resTiendas] = await Promise.all([
-          fetch('http://localhost:8080/api/inventario/todos'),
-          fetch('http://localhost:8080/api/establecimientos/todos')
+          fetch('https://backautored-production.up.railway.app/api/inventario/todos'),
+          fetch('https://backautored-production.up.railway.app/api/establecimientos/todos')
         ]);
 
         if (!resInventario.ok || !resTiendas.ok) throw new Error('Error al conectar con la base de datos');

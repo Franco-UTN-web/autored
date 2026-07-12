@@ -21,7 +21,7 @@ export default function InventoryAudit() {
     setCargando(true);
     try {
       // Obtenemos TODO el inventario, sin importar el estado
-      const res = await fetch('http://localhost:8080/api/inventario/todos');
+      const res = await fetch('https://backautored-production.up.railway.app/api/inventario/todos');
       if (res.ok) {
         const data = await res.json();
         setInventario(data);
@@ -44,17 +44,17 @@ export default function InventoryAudit() {
     try {
       if (accion === 'eliminar') {
         // HARD DELETE: Borrado definitivo de base de datos
-        await fetch(`http://localhost:8080/api/inventario/eliminar/${inventarioId}`, {
+        await fetch(`https://backautored-production.up.railway.app/api/inventario/eliminar/${inventarioId}`, {
           method: 'DELETE'
         });
       } else if (accion === 'suspender') {
         // BAJA LÓGICA: Desactiva la pieza (OJO: Ajusta esta URL según tu backend de Piezas)
-        await fetch(`http://localhost:8080/api/piezas/${piezaId}/suspender`, {
+        await fetch(`https://backautored-production.up.railway.app/api/piezas/${piezaId}/suspender`, {
           method: 'PUT'
         });
       } else if (accion === 'reactivar') {
         // ALTA LÓGICA: Reactiva la pieza
-        await fetch(`http://localhost:8080/api/piezas/${piezaId}/reactivar`, {
+        await fetch(`https://backautored-production.up.railway.app/api/piezas/${piezaId}/reactivar`, {
           method: 'PUT'
         });
       }

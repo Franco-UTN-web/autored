@@ -39,8 +39,8 @@ export default function StoreProfile() {
       try {
         // Hacemos DOS peticiones al mismo tiempo: Inventario y Establecimientos
         const [resInventario, resEstablecimientos] = await Promise.all([
-          fetch('http://localhost:8080/api/inventario/todos'),
-          fetch('http://localhost:8080/api/establecimientos/todos')
+          fetch('https://backautored-production.up.railway.app/api/inventario/todos'),
+          fetch('https://backautored-production.up.railway.app/api/establecimientos/todos')
         ]);
 
         if (!resInventario.ok) throw new Error('Error al conectar con la base de datos');

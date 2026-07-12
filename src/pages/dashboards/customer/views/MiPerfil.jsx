@@ -92,7 +92,7 @@ export default function MiPerfil() {
       }
 
       // --- LÓGICA DE BACKEND (SPRING BOOT) ---
-      const response = await fetch(`http://localhost:8080/api/perfiles/actualizar/${userId}`, {
+      const response = await fetch(`https://backautored-production.up.railway.app/api/perfiles/actualizar/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

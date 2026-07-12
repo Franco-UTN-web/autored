@@ -11,7 +11,7 @@ export default function UserManagement() {
 
   const cargarUsuarios = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/admin/compradores');
+      const response = await fetch('https://backautored-production.up.railway.app/api/admin/compradores');
       if (response.ok) {
         const data = await response.json();
         setCompradores(data);
@@ -25,7 +25,7 @@ export default function UserManagement() {
 
   const alternarEstadoUsuario = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/compradores/${id}/suspender`, {
+      const response = await fetch(`https://backautored-production.up.railway.app/api/admin/compradores/${id}/suspender`, {
         method: 'PUT'
       });
       

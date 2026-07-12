@@ -18,7 +18,7 @@ export default function StoreInventory({ miEstablecimiento }) {
   const cargarMiInventario = async () => {
     setCargando(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/inventario/tienda/${miEstablecimiento.id}`);
+      const response = await fetch(`https://backautored-production.up.railway.app/api/inventario/tienda/${miEstablecimiento.id}`);
       if (response.ok) {
         const data = await response.json();
         setInventario(data.filter(item => item.pieza && item.pieza.activo !== false));
@@ -43,7 +43,7 @@ export default function StoreInventory({ miEstablecimiento }) {
     const id = modalEliminar.idProducto;
     setModalEliminar({ visible: false, idProducto: null });
     try {
-      const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
+      const response = await fetch(`https://backautored-production.up.railway.app/api/inventario/eliminar/${id}`, { method: 'DELETE' });
       if (response.ok) {
         mostrarNotificacion("Producto eliminado del inventario.");
         cargarMiInventario();

@@ -73,7 +73,7 @@ export default function StoreManagement({
     setGuardandoEdicion(true);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/admin/tiendas/${modalEditar.tienda.id}/actualizar`, {
+      const response = await fetch(`https://backautored-production.up.railway.app/api/admin/tiendas/${modalEditar.tienda.id}/actualizar`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modalEditar.tienda)

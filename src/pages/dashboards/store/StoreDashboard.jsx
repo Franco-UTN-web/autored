@@ -67,7 +67,7 @@ export default function StoreDashboard() {
   const inicializarPanel = async () => {
     if (!usuarioLogueado) return;
     try {
-      const resEstablecimientos = await fetch('http://localhost:8080/api/establecimientos/todos');
+      const resEstablecimientos = await fetch('https://backautored-production.up.railway.app/api/establecimientos/todos');
       if (resEstablecimientos.ok) {
         const tiendas = await resEstablecimientos.json();
         const miTienda = tiendas.find(t => t.propietario_id === usuarioLogueado.id);
@@ -77,8 +77,8 @@ export default function StoreDashboard() {
           setFormData(prev => ({ ...prev, establecimiento_id: miTienda.id }));
 
           const [resLocal, resGlobal] = await Promise.all([
-            fetch(`http://localhost:8080/api/inventario/tienda/${miTienda.id}`),
-            fetch('http://localhost:8080/api/inventario/todos')
+            fetch(`https://backautored-production.up.railway.app/api/inventario/tienda/${miTienda.id}`),
+            fetch('https://backautored-production.up.railway.app/api/inventario/todos')
           ]);
 
           if (resLocal.ok) setInventarioLocal(await resLocal.json());
@@ -132,7 +132,7 @@ export default function StoreDashboard() {
     const id = modalEliminar.idProducto;
     setModalEliminar({ visible: false, idProducto: null });
     try {
-      const response = await fetch(`http://localhost:8080/api/inventario/eliminar/${id}`, { method: 'DELETE' });
+      const response = await fetch(`https://backautored-production.up.railway.app/api/inventario/eliminar/${id}`, { method: 'DELETE' });
       if (response.ok) {
         mostrarNotificacion("Producto eliminado del inventario.");
         inicializarPanel();
@@ -150,7 +150,7 @@ export default function StoreDashboard() {
     formData.append('file', file);
     
     // 2. Se lo enviamos a nuestro backend de Java indicando la carpeta
-    const response = await fetch('http://localhost:8080/api/archivos/subir?carpeta=refaccionarias', {
+    const response = await fetch('https://backautored-production.up.railway.app/api/archivos/subir?carpeta=refaccionarias', {
       method: 'POST',
       body: formData 
       // Nota: No agregamos 'Content-Type', el navegador lo pone automáticamente con FormData
@@ -179,7 +179,7 @@ export default function StoreDashboard() {
         urlFinalImagen = await subirImagenASupabase(imagenSeleccionada);
       }
       const payloadCompleto = { ...formData, imagen_url: urlFinalImagen };
-      const urlFetch = idEdicion ? `http://localhost:8080/api/inventario/actualizar/${idEdicion}` : 'http://localhost:8080/api/inventario/agregar';
+      const urlFetch = idEdicion ? `https://backautored-production.up.railway.app/api/inventario/actualizar/${idEdicion}` : 'https://backautored-production.up.railway.app/api/inventario/agregar';
       const metodoFetch = idEdicion ? 'PUT' : 'POST';
       
       const response = await fetch(urlFetch, {

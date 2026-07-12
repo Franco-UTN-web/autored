@@ -96,7 +96,7 @@ export default function Login() {
         if (error) throw new Error('Credenciales incorrectas o correo sin verificar.');
 
         // 2. 🛡️ PREGUNTAMOS A SPRING BOOT LA VERDAD ABSOLUTA
-        const syncResponse = await fetch('http://localhost:8080/api/login/sync', {
+        const syncResponse = await fetch('https://backautored-production.up.railway.app/api/login/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

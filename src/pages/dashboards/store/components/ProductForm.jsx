@@ -58,7 +58,7 @@ export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, o
     formData.append('file', file);
     
     // Hablamos con NUESTRO servidor local en lugar de Supabase directo
-    const response = await fetch('http://localhost:8080/api/archivos/subir', {
+    const response = await fetch('https://backautored-production.up.railway.app/api/archivos/subir', {
       method: 'POST',
       body: formData // No le ponemos Content-Type, el navegador lo calcula solo al ver un FormData
     });
@@ -82,7 +82,7 @@ export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, o
       }
       
       const payloadCompleto = { ...formData, imagen_url: urlFinalImagen };
-      const urlFetch = idEdicion ? `http://localhost:8080/api/inventario/actualizar/${idEdicion}` : 'http://localhost:8080/api/inventario/agregar';
+      const urlFetch = idEdicion ? `https://backautored-production.up.railway.app/api/inventario/actualizar/${idEdicion}` : 'https://backautored-production.up.railway.app/api/inventario/agregar';
       const metodoFetch = idEdicion ? 'PUT' : 'POST';
       
       const response = await fetch(urlFetch, {

@@ -24,7 +24,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchAdminData = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/establecimientos/todos');
+        const response = await fetch('https://backautored-production.up.railway.app/api/establecimientos/todos');
         if (response.ok) {
           const data = await response.json();
           
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
 
     try {
       // Tu lógica dinámica es perfecta aquí
-      const response = await fetch(`http://localhost:8080/api/establecimientos/${accion}/${id}`, { method: 'PUT' });
+      const response = await fetch(`https://backautored-production.up.railway.app/api/establecimientos/${accion}/${id}`, { method: 'PUT' });
       if (response.ok) {
         const tiendaProcesada = [...solicitudes, ...tiendasActivas, ...tiendasSuspendidas].find(t => t.id === id);
         

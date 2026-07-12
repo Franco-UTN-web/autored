@@ -6,7 +6,7 @@ export default function AnalyticsView() {
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/admin/metricas')
+    fetch('https://backautored-production.up.railway.app/api/admin/metricas')
       .then(res => res.json())
       .then(data => {
         setMetricas(data);
