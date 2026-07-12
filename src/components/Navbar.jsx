@@ -188,9 +188,9 @@ export default function Navbar() {
             {rol && (
                <button 
                  onClick={() => {
-                   localStorage.clear();
-                   window.location.href = '/login';
-                 }}
+                 localStorage.clear();
+                 navigate('/login');
+                }}
                  className="flex items-center justify-center gap-2 w-full text-red-600 bg-red-50 hover:bg-red-100 px-4 py-3.5 rounded-xl font-bold transition-colors mt-2"
                >
                  <LogOut size={20} /> Cerrar Sesión
