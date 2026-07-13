@@ -41,7 +41,8 @@ export default function MapaSelector({ onCoordenadasSeleccionadas, onDireccionEn
               const direccionTraducida = {
                 calle: datos.address.road || datos.address.pedestrian || '',
                 numero: datos.address.house_number || '',
-                colonia: datos.address.neighbourhood || datos.address.suburb || '',
+               colonia: datos.address.neighbourhood || datos.address.suburb || datos.address.residential || '',
+                cp: datos.address.postcode || '',
                 cp: datos.address.postcode || '',
                 ciudad: datos.address.city || datos.address.town || datos.address.county || '',
                 estado_rep: datos.address.state || ''

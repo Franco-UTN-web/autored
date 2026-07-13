@@ -276,26 +276,26 @@ export default function RegistroNegocio() {
                     />
                   </div>
 
-                  {/* MAPA A TAMAÑO COMPLETO */}
-                  <div className="md:col-span-6 w-full my-2">
-                    <MapaSelector 
-                      onCoordenadasSeleccionadas={(lat, lng) => {
-                        setLatitud(lat);
-                        setLongitud(lng);
-                      }}
-                      onDireccionEncontrada={(datosMapa) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          calle: datosMapa.calle || prev.calle,
-                          numero: datosMapa.numero || prev.numero,
-                          colonia: datosMapa.colonia || prev.colonia,
-                          cp: datosMapa.cp || prev.cp,
-                          ciudad: datosMapa.ciudad || prev.ciudad,
-                          estado_rep: datosMapa.estado_rep || prev.estado_rep 
-                        }));
-                      }}
-                    />
-                  </div>
+                 {/* MAPA A TAMAÑO COMPLETO */}
+             <div className="md:col-span-6 w-full my-2">
+               <MapaSelector 
+               onCoordenadasSeleccionadas={(lat, lng) => {
+               setLatitud(lat);
+               setLongitud(lng);
+                }}
+            onDireccionEncontrada={(datosMapa) => {
+              setFormData(prev => ({
+              ...prev,
+        calle: datosMapa.calle,
+        numero: datosMapa.numero,
+        colonia: datosMapa.colonia,
+        cp: datosMapa.cp,
+        ciudad: datosMapa.ciudad,
+        estado_rep: datosMapa.estado_rep 
+      }));
+    }}
+  />
+</div>
 
                   <div className="md:col-span-3">
                     <label className="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Ciudad / Municipio</label>
