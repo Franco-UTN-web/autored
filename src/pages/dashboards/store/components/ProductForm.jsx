@@ -11,7 +11,11 @@ const vehiculosDb = {
   "Universal": ["Aplica para cualquier modelo"]
 };
 const aniosDisponibles = ["Todos los años", ...Array.from(new Array(37), (val, index) => (new Date().getFullYear() + 1) - index).map(String)];
-const marcasRefacciones = ["Bosch", "Brembo", "Gates", "LUK", "Valeo", "ACDelco", "Castrol", "KYB", "NGK", "Genérica"];
+const marcasRefacciones = [
+  "ACDelco", "Bardahl", "Boge", "Bosch", "Brembo", "Castrol", 
+  "Dai", "Fritec", "Gates", "Genérica", "Gonher", "KYB", 
+  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner"
+];
 
 export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, onSuccess, mostrarNotificacion }) {
   const [cargando, setCargando] = useState(false);
