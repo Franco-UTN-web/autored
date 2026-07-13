@@ -134,8 +134,7 @@ export default function ChatWindow() {
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-[360px] sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 z-[100] flex flex-col overflow-hidden animate-fade-in" style={{ height: '550px', maxHeight: '85vh' }}>
-          
+       <div className="fixed bottom-20 right-4 left-4 sm:bottom-24 sm:right-6 sm:left-auto sm:w-[400px] bg-white rounded-3xl shadow-2xl border border-gray-100 z-[100] flex flex-col overflow-hidden animate-fade-in" style={{ height: '550px', maxHeight: '80vh' }}>   
           {/* Header del Chat */}
           <div className="bg-gradient-to-r from-autoblue to-blue-800 p-4 text-white flex items-center gap-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full blur-xl -mr-10 -mt-10"></div>
