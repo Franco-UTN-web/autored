@@ -344,8 +344,9 @@ export default function ProductDetail() {
                 })}
               </div>
 
-              {/* MAPA LEAFLET */}
-              <div className="w-full lg:w-1/2 min-h-[300px] bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative overflow-hidden z-0">
+           {/* MAPA LEAFLET */}
+              {/* 🔥 1. Cambiamos min-h-[300px] por h-[300px] estricto para móvil */}
+              <div className="w-full lg:w-1/2 h-[300px] lg:h-full bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative overflow-hidden z-0">
                 
                 {/* Alerta Personalizada */}
                 {alertaMapa && (
@@ -364,7 +365,14 @@ export default function ProductDetail() {
                   </div>
                 )}
 
-                <MapContainer center={mapCenter} zoom={5} style={{ width: '100%', height: '100%' }}>
+                {/* 🔥 2. Agregamos el prop "key" atado a mapCenter para evitar el cuadro gris */}
+                <MapContainer 
+                  key={`${mapCenter[0]}-${mapCenter[1]}`} 
+                  center={mapCenter} 
+                  zoom={5} 
+                  style={{ width: '100%', height: '100%' }}
+                  className="z-0"
+                >
                   <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   
                   <RecenterMap coordenadas={mapCenter} zoom={tiendaSeleccionada ? 16 : 5} />

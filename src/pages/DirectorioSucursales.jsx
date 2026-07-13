@@ -135,8 +135,9 @@ export default function DirectorioSucursales() {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA (MAPA) */}
-          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative overflow-hidden z-0 min-h-[400px] lg:min-h-[400px] lg:h-full">
+       {/* COLUMNA DERECHA (MAPA) */}
+          {/* 🔥 1. Cambiamos min-h por h-[400px] estricto para móvil */}
+          <div className="w-full lg:w-2/3 bg-gray-200 border border-gray-200 rounded-2xl shadow-sm relative overflow-hidden z-0 h-[400px] lg:h-full">
             
             {/* 🔥 ALERTA PERSONALIZADA FLOTANTE 🔥 */}
             {alertaMapa && (
@@ -158,10 +159,13 @@ export default function DirectorioSucursales() {
               </div>
             )}
 
+            {/* 🔥 2. Agregamos el prop "key" atado a las coordenadas */}
             <MapContainer 
+              key={`${mapCenter[0]}-${mapCenter[1]}`} 
               center={mapCenter} 
               zoom={5} 
               style={{ width: '100%', height: '100%' }}
+              className="z-0"
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
