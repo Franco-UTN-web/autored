@@ -104,19 +104,26 @@ export default function AdminDashboard() {
 
   if (cargando) return <div className="flex h-screen items-center justify-center font-medium text-gray-500">Cargando panel...</div>;
 
-  return (
-    <div className="flex h-screen bg-gray-50 text-gray-800 font-sans">
-      {/* Sidebar Profesional */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col justify-between p-4">
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 px-2 py-3 border-b border-gray-100">
-            <span className="font-extrabold text-xl tracking-tight text-red-600">Auto<span className="text-gray-900">Red</span></span>
-            <span className="text-[10px] bg-red-50 text-red-700 border border-red-100 px-1.5 py-0.5 rounded font-bold">ADMIN</span>
+return (
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
+      
+      {/* Sidebar Profesional (Convertido a Topbar en móvil) */}
+      <aside className="w-full md:w-64 bg-white border-b md:border-r border-gray-200 flex flex-col flex-shrink-0 z-10 p-4">
+        <div className="space-y-2 md:space-y-6">
+          
+          {/* Encabezado */}
+          <div className="flex items-center justify-between md:justify-start gap-2 px-2 py-2 md:py-3 border-b border-gray-100">
+            <div>
+              <span className="font-extrabold text-xl tracking-tight text-red-600">Auto<span className="text-gray-900">Red</span></span>
+              <span className="ml-2 text-[10px] bg-red-50 text-red-700 border border-red-100 px-1.5 py-0.5 rounded font-bold">ADMIN</span>
+            </div>
           </div>
-          <nav className="space-y-1">
+          
+          {/* Navegación (Horizontal con scroll en móvil, Vertical en PC) */}
+          <nav className="flex md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
             <button
               onClick={() => setVistaActiva('tiendas')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 vistaActiva === 'tiendas' ? 'bg-red-50/60 text-red-700' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
@@ -124,15 +131,15 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setVistaActiva('analiticas')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 vistaActiva === 'analiticas' ? 'bg-red-50/60 text-red-700' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
               <LayoutDashboard size={18} /> Analíticas
             </button>
-               <button
+            <button
               onClick={() => setVistaActiva('usuarios')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 vistaActiva === 'usuarios' ? 'bg-red-50/60 text-red-700' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
@@ -141,7 +148,7 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={() => setVistaActiva('auditoria')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 vistaActiva === 'auditoria' ? 'bg-red-50/60 text-red-700' : 'text-gray-500 hover:bg-gray-50'
               }`}
             >
@@ -153,7 +160,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Área Principal */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-gray-50 relative p-0 md:p-4">
         {vistaActiva === 'tiendas' && (
           <StoreManagement 
             solicitudes={solicitudes}
@@ -170,12 +177,11 @@ export default function AdminDashboard() {
             verDirectorio={verDirectorio}
             setVerDirectorio={setVerDirectorio}
           />
-          
         )}
         {vistaActiva === 'analiticas' && (
           <AnalyticsView />
-          )}
-          {vistaActiva === 'auditoria' && (
+        )}
+        {vistaActiva === 'auditoria' && (
           <InventoryAudit />
         )}
         {vistaActiva === 'usuarios' && (
