@@ -17,7 +17,7 @@ const aniosDisponibles = ["Todos los años", ...Array.from(new Array(37), (val, 
 const marcasRefacciones = [
   "ACDelco", "Bardahl", "Boge", "Bosch", "Brembo", "Castrol", 
   "Dai", "Fritec", "Gates", "Genérica", "Gonher", "KYB", 
-  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner", "Mobil"
+  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner", "Mobil" , "Purolator"
 ];
 
 export default function StoreDashboard() {

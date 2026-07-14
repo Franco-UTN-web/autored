@@ -14,7 +14,7 @@ const aniosDisponibles = ["Todos los años", ...Array.from(new Array(37), (val, 
 const marcasRefacciones = [
   "ACDelco", "Bardahl", "Boge", "Bosch", "Brembo", "Castrol", 
   "Dai", "Fritec", "Gates", "Genérica", "Gonher", "KYB", 
-  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner"
+  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner", , "Purolator"
 ];
 
 export default function ProductForm({ miEstablecimiento, itemAEditar, onClose, onSuccess, mostrarNotificacion }) {

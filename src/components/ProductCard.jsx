@@ -10,10 +10,13 @@ export default function ProductCard({ item, miTiendaId, enComparacion, onToggleC
 
   const esMiPieza = miTiendaId && item.establecimiento_id === miTiendaId;
   
-  // NUEVA REGLA: Verificamos si el producto se quedó sin existencias
+ // NUEVA REGLA: Verificamos si el producto se quedó sin existencias
   const sinStock = item.stock <= 0; 
 
-  const numeroTelefono = "525512345678"; 
+  // 🔥 LEEMOS EL TELÉFONO DINÁMICAMENTE 🔥
+  // Intentamos buscarlo en tiendaInfo o establecimiento (depende de cómo lo mande el padre)
+  const numeroTelefono = item.tiendaInfo?.telefono || item.establecimiento?.telefono || "525500000000"; 
+  
   const numParteTexto = pieza.numero_parte ? ` (PN: ${pieza.numero_parte})` : '';
   const mensajeWa = `Hola, vengo de AutoRed. Me interesa la pieza: *${pieza.nombre_comercial}*${numParteTexto} Marca: ${pieza.marca}. ¿Aún tienen stock a $${item.precio_oferta}?`;
   const linkWhatsApp = `https://wa.me/${numeroTelefono}?text=${encodeURIComponent(mensajeWa)}`;
