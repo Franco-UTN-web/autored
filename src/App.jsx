@@ -25,6 +25,9 @@ function App() {
   // ==========================================
   // ATRAPADOR DE SESIÓN DE GOOGLE (Mejorado)
   // ==========================================
+  // ==========================================
+  // ATRAPADOR DE SESIÓN DE GOOGLE (Mejorado Anti-Suspendidos)
+  // ==========================================
   useEffect(() => {
     const hash = window.location.hash;
     
@@ -36,7 +39,7 @@ function App() {
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const SUPABASE_USER_URL = 'https://rdhntqsabwcbulnapfcg.supabase.co/auth/v1/user';
 
-      // Vamos a buscar los datos del usuario
+      // Vamos a buscar los datos del usuario en Supabase
       fetch(SUPABASE_USER_URL, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -44,22 +47,52 @@ function App() {
         }
       })
       .then(res => res.json())
-      .then(user => {
-        // Si el usuario viene de Google y no tiene rol, le ponemos 'comprador' por defecto
+      .then(async (user) => { // 🔥 IMPORTANTE: Agregamos 'async' aquí
+        
         if (!user.user_metadata) {
           user.user_metadata = {};
         }
-        if (!user.user_metadata.role) {
-          user.user_metadata.role = 'comprador';
+
+        try {
+          // 🛡️ 1. LE PREGUNTAMOS A SPRING BOOT ANTES DE DEJARLO ENTRAR
+          const syncResponse = await fetch('https://backautored-production.up.railway.app/api/login/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: user.id,
+              email: user.email,
+              nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || 'Usuario'
+            })
+          });
+
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json();
+
+            // 🚨 2. VERIFICACIÓN DE SUSPENSIÓN
+            if (syncData.activo === 'false' || syncData.activo === false) {
+              alert('Acceso denegado: Tu cuenta ha sido suspendida por un administrador.');
+              window.history.replaceState(null, null, window.location.pathname);
+              window.location.href = '/login'; // Lo regresamos al inicio
+              return; // ⛔ Detenemos la ejecución, NO SE GUARDA LA SESIÓN
+            }
+
+            // 3. Si no está suspendido, forzamos el rol que dijo Java
+            user.user_metadata.role = syncData.rol || 'comprador';
+            user.user_metadata.nombre = syncData.nombre;
+          }
+
+          // 4. Ahora sí, guardamos todo correcto en memoria
+          localStorage.setItem('session_token', accessToken);
+          localStorage.setItem('user_data', JSON.stringify(user));
+          
+          // Limpiamos la URL dejándola exactamente en /inicio y recargamos
+          window.history.replaceState(null, null, window.location.pathname);
+          window.location.reload(); 
+
+        } catch (err) {
+          console.error("Error verificando estado en Java:", err);
         }
 
-        // Ahora sí, guardamos todo correcto en memoria
-        localStorage.setItem('session_token', accessToken);
-        localStorage.setItem('user_data', JSON.stringify(user));
-        
-        // Limpiamos la URL dejándola exactamente en /inicio y recargamos
-        window.history.replaceState(null, null, window.location.pathname);
-        window.location.reload(); 
       })
       .catch(err => console.error("Error verificando cuenta de Google:", err));
     }
