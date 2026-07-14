@@ -36,7 +36,7 @@ export default function StoreProfile() {
     }
 
     const fetchDatosTienda = async () => {
-      try {
+    try {
         // Hacemos DOS peticiones al mismo tiempo: Inventario y Establecimientos
         const [resInventario, resEstablecimientos] = await Promise.all([
           fetch('https://backautored-production.up.railway.app/api/inventario/todos'),
@@ -45,30 +45,34 @@ export default function StoreProfile() {
 
         if (!resInventario.ok) throw new Error('Error al conectar con la base de datos');
         
-        // 2. Procesamos el inventario
         const dataInventario = await resInventario.json();
         
-        // 🔥 FILTRO DE BAJA LÓGICA APLICADO AQUÍ 🔥
-        const productosFiltrados = dataInventario.filter(item => 
-          item.establecimiento_id === id && 
-          item.pieza && 
-          item.pieza.activo !== false // Ocultamos si el Admin la desactivó
-        );
-        
-        setInventarioTienda(productosFiltrados);
-
-        // 3. Buscamos el nombre oficial de la tienda
+        // 🔥 1. PRIMERO BUSCAMOS LA TIENDA PARA SACAR SU TELÉFONO 🔥
+        let tiendaEncontrada = null;
         if (resEstablecimientos.ok) {
           const dataEstablecimientos = await resEstablecimientos.json();
-          const tiendaEncontrada = dataEstablecimientos.find(tienda => tienda.id === id);
+          tiendaEncontrada = dataEstablecimientos.find(tienda => tienda.id === id);
           
           if (tiendaEncontrada && tiendaEncontrada.nombre) {
             setNombreTienda(tiendaEncontrada.nombre);
           } else {
-            // Si por algo no tiene nombre, usamos un genérico
             setNombreTienda(`Sucursal ${id.split('-')[0].toUpperCase()}`);
           }
         }
+
+        // 🔥 2. FILTRAMOS EL INVENTARIO Y LE "PEGAMOS" LOS DATOS DE LA TIENDA 🔥
+        const productosFiltrados = dataInventario
+          .filter(item => 
+            item.establecimiento_id === id && 
+            item.pieza && 
+            item.pieza.activo !== false // Ocultamos si el Admin la desactivó
+          )
+          .map(item => ({
+            ...item,
+            tiendaInfo: tiendaEncontrada // ¡Aquí le inyectamos el teléfono a ProductCard!
+          }));
+        
+        setInventarioTienda(productosFiltrados);
         
       } catch (error) {
         setError(error.message);
