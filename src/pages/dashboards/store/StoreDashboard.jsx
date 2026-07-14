@@ -12,12 +12,12 @@ const vehiculosDb = {
   "Universal": ["Aplica para cualquier modelo"]
 };
 
-const aniosDisponibles = [
-  "Todos los años", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018"
-];
+const aniosDisponibles = ["Todos los años", ...Array.from(new Array(37), (val, index) => (new Date().getFullYear() + 1) - index).map(String)];
 
 const marcasRefacciones = [
-  "Bosch", "Brembo", "Gates", "LUK", "Valeo", "ACDelco", "Castrol", "KYB", "NGK", "Genérica"
+  "ACDelco", "Bardahl", "Boge", "Bosch", "Brembo", "Castrol", 
+  "Dai", "Fritec", "Gates", "Genérica", "Gonher", "KYB", 
+  "LUK", "NGK", "Roshfrans", "Valeo", "Wagner", "Mobil"
 ];
 
 export default function StoreDashboard() {
