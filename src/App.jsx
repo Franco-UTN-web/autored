@@ -14,7 +14,7 @@ import ProductDetail from './pages/ProductDetail';
 import StoreProfile from './pages/StoreProfile';
 import RegistroNegocio from './pages/RegistroNegocio';
 import DirectorioSucursales from './pages/DirectorioSucursales';
-
+import UpdatePassword from './pages/UpdatePassword';
 
 import CustomerDashboard from './pages/dashboards/customer/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/store/StoreDashboard';
@@ -28,18 +28,27 @@ function App() {
   // ==========================================
   // ATRAPADOR DE SESIÓN DE GOOGLE (Mejorado Anti-Suspendidos)
   // ==========================================
-  useEffect(() => {
+useEffect(() => {
     const hash = window.location.hash;
     
-    // Si la URL trae un token de Google...
     if (hash && hash.includes("access_token")) {
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get("access_token");
+      const type = params.get("type"); // 🔥 DETECTAMOS EL TIPO DE ENLACE
 
+      // 1. SI ES UN ENLACE DE RECUPERAR CONTRASEÑA
+      if (type === "recovery") {
+        // Guardamos el token temporalmente solo para actualizar la contraseña
+        localStorage.setItem('recovery_token', accessToken);
+        window.history.replaceState(null, null, '/actualizar-password');
+        window.location.reload();
+        return; // ⛔ Detenemos aquí, NO iniciamos sesión
+      }
+
+      // 2. SI ES UN INICIO DE SESIÓN CON GOOGLE NORMAL
       const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const SUPABASE_USER_URL = 'https://rdhntqsabwcbulnapfcg.supabase.co/auth/v1/user';
 
-      // Vamos a buscar los datos del usuario en Supabase
       fetch(SUPABASE_USER_URL, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -47,14 +56,10 @@ function App() {
         }
       })
       .then(res => res.json())
-      .then(async (user) => { // 🔥 IMPORTANTE: Agregamos 'async' aquí
-        
-        if (!user.user_metadata) {
-          user.user_metadata = {};
-        }
+      .then(async (user) => { 
+        if (!user.user_metadata) user.user_metadata = {};
 
         try {
-          // 🛡️ 1. LE PREGUNTAMOS A SPRING BOOT ANTES DE DEJARLO ENTRAR
           const syncResponse = await fetch('https://backautored-production.up.railway.app/api/login/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -67,34 +72,27 @@ function App() {
 
           if (syncResponse.ok) {
             const syncData = await syncResponse.json();
-
-            // 🚨 2. VERIFICACIÓN DE SUSPENSIÓN
             if (syncData.activo === 'false' || syncData.activo === false) {
-              alert('Acceso denegado: Tu cuenta ha sido suspendida por un administrador.');
+              alert('Acceso denegado: Tu cuenta ha sido suspendida.');
               window.history.replaceState(null, null, window.location.pathname);
-              window.location.href = '/login'; // Lo regresamos al inicio
-              return; // ⛔ Detenemos la ejecución, NO SE GUARDA LA SESIÓN
+              window.location.href = '/login'; 
+              return; 
             }
-
-            // 3. Si no está suspendido, forzamos el rol que dijo Java
             user.user_metadata.role = syncData.rol || 'comprador';
             user.user_metadata.nombre = syncData.nombre;
           }
 
-          // 4. Ahora sí, guardamos todo correcto en memoria
           localStorage.setItem('session_token', accessToken);
           localStorage.setItem('user_data', JSON.stringify(user));
           
-          // Limpiamos la URL dejándola exactamente en /inicio y recargamos
           window.history.replaceState(null, null, window.location.pathname);
           window.location.reload(); 
 
         } catch (err) {
           console.error("Error verificando estado en Java:", err);
         }
-
       })
-      .catch(err => console.error("Error verificando cuenta de Google:", err));
+      .catch(err => console.error("Error verificando cuenta:", err));
     }
   }, []);
   // ==========================================
@@ -116,6 +114,7 @@ function App() {
             <Route path="/tienda/:id" element={<StoreProfile />} />
             <Route path="/registro-negocio" element={<RegistroNegocio />} />
             <Route path="/directorio" element={<DirectorioSucursales />} />
+            <Route path="/actualizar-password" element={<UpdatePassword />} />
             
             
             <Route path="/dashboard/customer" element={
