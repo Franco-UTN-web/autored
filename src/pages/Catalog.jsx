@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { supabase } from '../supabase';
 
@@ -40,12 +40,23 @@ export default function Catalog() {
   const [modalMatrizAbierto, setModalMatrizAbierto] = useState(false);
   const [alerta, setAlerta] = useState({ visible: false, mensaje: '' });
 
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroMarca, setFiltroMarca] = useState('Cualquiera');
-  const [filtroCategoria, setFiltroCategoria] = useState('Cualquiera');
-  const [precioMax, setPrecioMax] = useState(5000);
-  const [orden, setOrden] = useState('relevancia');
+ const [searchParams] = useSearchParams();
 
+  // Reemplazamos los estados estáticos por estos dinámicos:
+  const [busqueda, setBusqueda] = useState(searchParams.get('q') || '');
+  const [filtroMarca, setFiltroMarca] = useState(searchParams.get('marca') || 'Cualquiera');
+  const [filtroCategoria, setFiltroCategoria] = useState(searchParams.get('categoria') || 'Cualquiera');
+  
+  // Estos se quedan exactamente igual que como los tenías:
+  const [precioMax, setPrecioMax] = useState(5000);
+  const [orden, setOrden] = useState('relevancia');
+
+  useEffect(() => {
+    setBusqueda(searchParams.get('q') || '');
+    setFiltroCategoria(searchParams.get('categoria') || 'Cualquiera');
+    setFiltroMarca(searchParams.get('marca') || 'Cualquiera');
+  }, [searchParams]);
+  
   useEffect(() => {
     const inicializarCatalogo = async () => {
       try {
