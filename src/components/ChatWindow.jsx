@@ -72,16 +72,21 @@ export default function ChatWindow() {
         })
       });
 
-      if (!response.ok) throw new Error("Error en el servidor");
-      
+      // 🔥 ELIMINAMOS EL if (!response.ok). AHORA SIEMPRE LEEMOS EL JSON 🔥
       const data = await response.json();
       
       let respuestaIA;
       try {
-        respuestaIA = JSON.parse(data.rawJson);
+        // Verificamos si existe rawJson
+        if (data.rawJson) {
+          respuestaIA = JSON.parse(data.rawJson);
+        } else {
+          // Por si el backend manda el error directamente en data.mensaje
+          respuestaIA = { mensaje: data.mensaje || "Respuesta vacía del servidor", accion: 'NINGUNA' };
+        }
       } catch (parseError) {
         console.warn("La IA no devolvió un JSON perfecto, usando texto crudo.");
-        respuestaIA = { mensaje: data.rawJson, accion: 'NINGUNA' };
+        respuestaIA = { mensaje: data.rawJson || "Error procesando el texto.", accion: 'NINGUNA' };
       }
 
       setMessages(prev => [...prev, { text: respuestaIA.mensaje, isBot: true }]);
@@ -108,13 +113,13 @@ export default function ChatWindow() {
       }
       
     } catch (error) {
-      console.error("🔴 Error Crítico:", error);
-      setMessages(prev => [...prev, { text: "Hubo un corto circuito. Intenta de nuevo. 🔧", isBot: true }]);
+      // ESTE CATCH AHORA SOLO SE EJECUTA SI DE VERDAD SE CAE EL INTERNET 📡
+      console.error("🔴 Error de Red / Conexión:", error);
+      setMessages(prev => [...prev, { text: "Error de conexión. Revisa tu internet. 📡", isBot: true }]);
     } finally {
       setIsLoading(false);
     }
   };
-
   if (!estaAutenticado) {
     return null; 
   }
