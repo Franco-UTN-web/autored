@@ -12,17 +12,21 @@ export default function ApiUsagePanel() {
   const [historialReciente, setHistorialReciente] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchEstadisticas = async () => {
       try {
         const response = await fetch('https://backautored-production.up.railway.app/api/chat/estadisticas');
         if (response.ok) {
           const data = await response.json();
           
+          // 🔥 AQUÍ ESTÁ EL TRUCO: Calculamos el costo ($0.15 dólares por cada 1,000,000 de tokens)
+          const costoReal = (data.tokensConsumidos / 1000000) * 0.15;
+
           setMetricas(prev => ({
             ...prev,
             peticionesTotales: data.peticionesTotales,
             tokensConsumidos: data.tokensConsumidos >= 1000 ? `${(data.tokensConsumidos / 1000).toFixed(1)}k` : data.tokensConsumidos,
+            costoEstimado: `$${costoReal.toFixed(4)}` // <-- Muestra $0.0000
           }));
 
           // Formateamos las fechas que llegan de Java
