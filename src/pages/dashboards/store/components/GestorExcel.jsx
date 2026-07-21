@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function GestorCSV({ establecimientoId, onUploadSuccess }) {
+export default function GestorExcel({ establecimientoId, onUploadSuccess }) {
   const [archivo, setArchivo] = useState(null);
   const [mensaje, setMensaje] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -9,24 +9,25 @@ export default function GestorCSV({ establecimientoId, onUploadSuccess }) {
   const API_URL = 'https://backautored-production.up.railway.app/api/inventario';
 
   const manejarDescarga = () => {
-    // 🔥 Apuntamos a la URL pública de Railway 🔥
-    window.location.href = `${API_URL}/plantilla-csv`;
+    // 🔥 Ahora la descarga es instantánea desde la carpeta pública de React 🔥
+    window.location.href = '/plantilla_autored.xlsx';
   };
 
   const subirArchivo = async () => {
     if (!archivo) {
-      setMensaje('Por favor selecciona un archivo CSV.');
+      setMensaje('Por favor selecciona un archivo Excel (.xlsx).');
       return;
     }
 
     setCargando(true);
+    setMensaje('');
     const formData = new FormData();
     formData.append('file', archivo);
     formData.append('establecimiento_id', establecimientoId);
 
     try {
-      // 🔥 Apuntamos a la URL pública de Railway 🔥
-      const response = await fetch(`${API_URL}/upload-csv`, {
+      // Apuntamos al nuevo endpoint de Excel
+      const response = await fetch(`${API_URL}/upload-excel`, {
         method: 'POST',
         body: formData,
       });
@@ -35,8 +36,8 @@ export default function GestorCSV({ establecimientoId, onUploadSuccess }) {
       setMensaje(text);
 
       if (response.ok) {
-        setArchivo(null); // Limpiamos el selector de archivo
-        if (onUploadSuccess) onUploadSuccess(); // Recargamos el inventario en el dashboard
+        setArchivo(null); // Limpiamos el selector
+        if (onUploadSuccess) onUploadSuccess(); // Recargamos el inventario
       }
       
     } catch (error) {
@@ -51,24 +52,24 @@ export default function GestorCSV({ establecimientoId, onUploadSuccess }) {
       <div className="flex justify-between items-center">
         <div>
           <h3 className="font-bold text-gray-800 text-lg">Carga Masiva de Inventario</h3>
-          <p className="text-xs text-gray-500">Sube tus refacciones en lote usando nuestra plantilla oficial.</p>
+          <p className="text-xs text-gray-500">Sube tus refacciones usando nuestra plantilla de Excel oficial.</p>
         </div>
         <button 
           type="button"
           onClick={manejarDescarga}
-          className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-900 transition-all shadow-sm"
+          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-all shadow-sm"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          Descargar Plantilla
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Descargar Plantilla Excel
         </button>
       </div>
 
       <div className="flex gap-4 items-center bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
         <input 
           type="file" 
-          accept=".csv"
+          accept=".xlsx, .xls"
           onChange={(e) => setArchivo(e.target.files[0])}
-          className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-autoblue hover:file:bg-blue-100 cursor-pointer"
+          className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer"
         />
         <button 
           type="button"
@@ -76,7 +77,7 @@ export default function GestorCSV({ establecimientoId, onUploadSuccess }) {
           disabled={!archivo || cargando}
           className="bg-autoblue text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-800 transition-all disabled:opacity-50 shadow-sm"
         >
-          {cargando ? 'Procesando...' : 'Subir Datos'}
+          {cargando ? 'Procesando...' : 'Subir Inventario'}
         </button>
       </div>
       

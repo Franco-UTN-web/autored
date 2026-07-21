@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import GestorCSV from './components/GestorCSV';
+import GestorExcel from './components/GestorExcel';
 
 // --- DICCIONARIOS LOCALES ---
 const vehiculosDb = {
@@ -255,7 +255,7 @@ export default function StoreDashboard() {
 
             {/* 🔥 AQUÍ VA TU NUEVO CARGADOR DE CSV 🔥 */}
             {!showForm && miEstablecimiento && (
-              <GestorCSV 
+              <GestorExcel 
                 establecimientoId={miEstablecimiento.id} 
                 onUploadSuccess={inicializarPanel} 
               />
