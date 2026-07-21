@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import GestorCSV from './GestorCSV';
 
 // --- DICCIONARIOS LOCALES ---
 const vehiculosDb = {
@@ -42,6 +43,7 @@ export default function StoreDashboard() {
   const [cargando, setCargando] = useState(true);
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
   const [idEdicion, setIdEdicion] = useState(null);
+  
 
   const navigate = useNavigate();
 
@@ -250,6 +252,14 @@ export default function StoreDashboard() {
                 {showForm ? 'Cancelar' : '+ Agregar Nueva Pieza'}
               </button>
             </div>
+
+            {/* 🔥 AQUÍ VA TU NUEVO CARGADOR DE CSV 🔥 */}
+            {!showForm && miEstablecimiento && (
+              <GestorCSV 
+                establecimientoId={miEstablecimiento.id} 
+                onUploadSuccess={inicializarPanel} 
+              />
+            )}
 
             {/* FORMULARIO ACTUALIZADO */}
             {showForm && (
