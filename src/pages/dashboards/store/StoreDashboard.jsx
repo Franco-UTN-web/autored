@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import GestorCSV from './GestorCSV';
+import GestorCSV from '../components/GestorCSV';
 
 // --- DICCIONARIOS LOCALES ---
 const vehiculosDb = {
@@ -264,7 +264,7 @@ export default function StoreDashboard() {
             {/* FORMULARIO ACTUALIZADO */}
             {showForm && (
               <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200 space-y-6 shadow-inner border-t-4 border-t-autoblue">
-                
+
                 {/* SECCIÓN 1: DATOS DE LA REFACCIÓN */}
                 <div>
                   <h4 className="text-sm font-bold text-autoblue mb-3 border-b pb-1">1. Datos de la Refacción</h4>
