@@ -1,6 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import GestorCSV from '../components/GestorCSV';
+import GestorCSV from './components/GestorCSV';
 
 // --- DICCIONARIOS LOCALES ---
 const vehiculosDb = {
