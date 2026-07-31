@@ -15,6 +15,7 @@ import StoreProfile from './pages/StoreProfile';
 import RegistroNegocio from './pages/RegistroNegocio';
 import DirectorioSucursales from './pages/DirectorioSucursales';
 import UpdatePassword from './pages/UpdatePassword';
+import RecuperarPassword from './pages/RecuperarPassword';
 
 import CustomerDashboard from './pages/dashboards/customer/CustomerDashboard';
 import StoreDashboard from './pages/dashboards/store/StoreDashboard';
@@ -115,6 +116,7 @@ useEffect(() => {
             <Route path="/registro-negocio" element={<RegistroNegocio />} />
             <Route path="/directorio" element={<DirectorioSucursales />} />
             <Route path="/actualizar-password" element={<UpdatePassword />} />
+            <Route path="/recuperar-password" element={<RecuperarPassword />} />
             
             
             <Route path="/dashboard/customer" element={

@@ -20,10 +20,6 @@ export default function Login() {
     setCargando(true);
     setErrorMsg('');
 
-    // 🛡️ EXPLICACIÓN: Validación de formato de Correo (RegEx)
-    // Utiliza una "Expresión Regular". Verifica que el texto no tenga espacios ([^\s@]), 
-    // que contenga un arroba (@), seguido de más texto, un punto (\.), y el dominio (ej. com).
-    // Si no cumple este patrón exacto, frena la función (return) y no gasta recursos del servidor.
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setErrorMsg('Por favor, ingresa un correo electrónico válido.');
@@ -31,28 +27,19 @@ export default function Login() {
       return; 
     }
 
-    // 🛡️ EXPLICACIÓN: Validación de Contraseña Segura (RegEx)
-    // Busca hacia adelante (?=) para asegurar que exista: al menos una mayúscula ([A-Z]), 
-    // al menos un dígito (\d), y un símbolo especial. El .{6,}$ final asegura que mida 6 o más caracteres.
-    // Previene el registro de contraseñas débiles como "123456".
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_.-]).{6,}$/;
     if (!passwordRegex.test(password)) {
-      setErrorMsg('La contraseña debe tener al menos 6 caracteres, incluir una letra mayúscula, un número y un carácter especial (ej. @, #, $, %).');
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres, incluir una letra mayúscula, un número y un carácter especial.');
       setCargando(false);
       return; 
     }
 
     try {
       if (activeTab === 'signup') {
-        
-        // 🛡️ EXPLICACIÓN: Validación de Nombre Completo
-        // .trim() limpia los espacios en blanco accidentales (o intencionales) al inicio y final.
-        // Asegura que queden al menos 3 caracteres reales antes de permitir el registro.
         if (fullName.trim().length < 3) {
           throw new Error('Por favor, ingresa tu Nombre Completo (mínimo 3 letras).');
         }
 
-        // 1. Intentamos crear el usuario en Supabase
         const { data, error } = await supabase.auth.signUp({
           email: email,
           password: password,
@@ -67,27 +54,17 @@ export default function Login() {
 
         if (error) throw error;
 
-        // ==========================================
-        // 🛡️ VALIDACIONES BACKEND (Supabase)
-        // ==========================================
-
-        // 🛡️ EXPLICACIÓN: Detección de Correos Duplicados
-        // Supabase NO devuelve error si el correo ya existe (medida anti-hackers para no revelar correos).
-        // En su lugar, finge éxito pero devuelve el arreglo 'identities' vacío (length === 0).
-        // Interceptamos esa trampa aquí para avisarle amablemente al usuario real.
         if (data?.user?.identities != null && data.user.identities.length === 0) {
           throw new Error('Este correo ya está registrado en AutoRed. Por favor, cambia a "Iniciar Sesión" o recupera tu contraseña.');
         }
 
-        // Si pasa todo lo anterior, sí es una cuenta nueva y real
         setActiveTab('login');
         setErrorMsg('¡Cuenta creada! Revisa tu correo (y la carpeta SPAM) para verificar tu cuenta antes de iniciar sesión.');
         setEmail('');
         setPassword('');
         setFullName('');
 
-     } else {
-        // 1. Supabase verifica la contraseña
+      } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email,
           password: password,
@@ -95,7 +72,6 @@ export default function Login() {
 
         if (error) throw new Error('Credenciales incorrectas o correo sin verificar.');
 
-        // 2. 🛡️ PREGUNTAMOS A SPRING BOOT LA VERDAD ABSOLUTA
         const syncResponse = await fetch('https://backautored-production.up.railway.app/api/login/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -111,57 +87,25 @@ export default function Login() {
         const syncData = await syncResponse.json();
         
         if (syncData.activo === 'false' || syncData.activo === false) {
-          await supabase.auth.signOut(); // Destruimos la sesión que Supabase le acababa de dar
+          await supabase.auth.signOut();
           throw new Error('Acceso denegado: Tu cuenta ha sido suspendida por un administrador.');
         }
 
-        // 3. Forzamos el rol que dijo Java, ignorando el de Supabase
         data.user.user_metadata = {
           ...data.user.user_metadata,
-          role: syncData.rol, // <--- LA FUENTE DE LA VERDAD
+          role: syncData.rol, 
           nombre: syncData.nombre
         };
 
-        // 4. Guardamos la sesión
         localStorage.setItem('session_token', data.session.access_token);
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
-        // 5. Redirección basada en el rol real
         if (syncData.rol === 'tienda') navigate('/dashboard/store');
         else if (syncData.rol === 'admin') navigate('/dashboard/admin');
         else navigate('/dashboard/customer');
       }
       
     } catch (error) {
-      setErrorMsg(error.message);
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const handlePasswordRecovery = async () => {
-    
-    // 🛡️ EXPLICACIÓN: Pre-validación de Recuperación
-    // Verifica que el input no esté vacío y tenga formato de correo ANTES de contactar a Supabase.
-    // Esto evita gastar cuota de correos de recuperación (que cuestan dinero en producción) con peticiones basura.
-    if (!email) {
-      setErrorMsg('Por favor, ingresa tu correo electrónico arriba para enviar el enlace de recuperación.');
-      return;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setErrorMsg('Por favor, ingresa un correo electrónico válido.');
-      return;
-    }
-
-    setCargando(true);
-    setErrorMsg('');
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-      setErrorMsg('¡Enlace enviado! Revisa tu bandeja de entrada para restablecer tu contraseña.');
-    } catch(error) {
       setErrorMsg(error.message);
     } finally {
       setCargando(false);
@@ -314,9 +258,10 @@ export default function Login() {
                   <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 text-autoblue focus:ring-autoblue" />
                   <label htmlFor="remember" className="text-xs text-gray-500 font-bold cursor-pointer">Recordarme</label>
                 </div>
+                {/* 🔥 AQUI ESTÁ EL CAMBIO: Ahora navega a la nueva vista 🔥 */}
                 <button 
                   type="button" 
-                  onClick={handlePasswordRecovery}
+                  onClick={() => navigate('/recuperar-password')}
                   className="text-xs text-autoblue font-black hover:text-blue-800 transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
