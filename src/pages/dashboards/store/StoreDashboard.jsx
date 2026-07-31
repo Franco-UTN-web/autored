@@ -244,7 +244,7 @@ export default function StoreDashboard() {
         {activeTab === 'catalog' && (
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm animate-fade-in">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-lg text-gray-900">Gestión de Stock Real</h3>
+              <h3 className="font-bold text-lg text-gray-900">Gestión de Stock</h3>
               <button onClick={() => {
                 setShowForm(!showForm);
                 if(showForm) setIdEdicion(null);
