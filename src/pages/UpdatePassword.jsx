@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabase'; // Asegúrate de que esta ruta sea la correcta
 
 export default function UpdatePassword() {
   const [password, setPassword] = useState('');
@@ -9,53 +10,61 @@ export default function UpdatePassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Si alguien entra aquí sin un token de recuperación, lo rebotamos al login
-    const token = localStorage.getItem('recovery_token');
-    if (!token) {
-      navigate('/login');
+    // 1. Si la URL trae el hash de recuperación, estamos a salvo. No lo expulses.
+    if (window.location.hash.includes('type=recovery')) {
+      return; 
     }
+
+    // 2. Si no trae hash, comprobamos si tiene sesión activa
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Si de verdad no hay sesión ni hash, entonces sí lo mandamos al login
+      if (!session) {
+        navigate('/login');
+      }
+    };
+    checkSession();
   }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+    // Aplicamos la misma validación robusta que en el registro
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_.-]).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('La contraseña debe tener al menos 6 caracteres, incluir una letra mayúscula, un número y un carácter especial.');
       return;
     }
+
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
       return;
     }
 
     setLoading(true);
-    const token = localStorage.getItem('recovery_token');
-    const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
     try {
-      // Le enviamos la nueva contraseña a Supabase usando el token de recuperación
-      const response = await fetch('https://rdhntqsabwcbulnapfcg.supabase.co/auth/v1/user', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ password: password })
+      // Usamos el método nativo de Supabase para actualizar. 
+      // Como Supabase ya leyó el token de la URL, sabe a qué usuario pertenece esta petición.
+      const { error } = await supabase.auth.updateUser({
+        password: password
       });
 
-      if (!response.ok) {
-        throw new Error('El enlace de recuperación ha expirado o no es válido.');
+      if (error) {
+        throw error;
       }
 
-      // Si todo sale bien, limpiamos la basura temporal y lo mandamos a iniciar sesión
-      localStorage.removeItem('recovery_token');
-      alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.');
+      // Si todo sale bien, lo mandamos a iniciar sesión
+      alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión con tu nueva contraseña.');
+      
+      // Cerramos la sesión temporal de recuperación por seguridad
+      await supabase.auth.signOut();
       navigate('/login');
 
     } catch (err) {
-      setError(err.message);
+      setError('Error al actualizar: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -69,7 +78,7 @@ export default function UpdatePassword() {
           Crea una nueva contraseña
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600 font-medium">
-          Asegúrate de usar una contraseña que puedas recordar.
+          Asegúrate de usar una contraseña segura y que puedas recordar.
         </p>
       </div>
 
@@ -83,7 +92,7 @@ export default function UpdatePassword() {
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" 
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue outline-none transition-all" 
                 placeholder="••••••••" 
               />
             </div>
@@ -95,23 +104,28 @@ export default function UpdatePassword() {
                 required 
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue" 
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-autoblue outline-none transition-all" 
                 placeholder="••••••••" 
               />
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold text-center">
-                {error}
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-bold flex items-start gap-2">
+                 <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-autoblue hover:bg-blue-900 text-white font-bold py-3 rounded-xl transition-colors shadow-md disabled:opacity-50"
+              className="w-full bg-autoblue hover:bg-blue-900 text-white font-black py-3.5 rounded-xl transition-all shadow-md disabled:opacity-50 flex justify-center items-center h-12"
             >
-              {loading ? 'Actualizando...' : 'Guardar Nueva Contraseña'}
+              {loading ? (
+                 <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              ) : 'Guardar Nueva Contraseña'}
             </button>
           </form>
         </div>
